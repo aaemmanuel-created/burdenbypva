@@ -1,0 +1,20 @@
+# Anything listed here is excluded from the EAS Build upload.
+# Only the burden-native folder needs to ship to the build server.
+
+# Exclude sibling folders from the parent repo
+../burden-app/
+../DELETE_REVIEW_rebuild_docx_extract/
+../DELETE_REVIEW_rebuild2_docx_extract/
+../DELETE_REVIEW_unpacked_docx_extract/
+../BURDEN_blueprint.docx
+../BURDEN_blueprint.md
+../BURDEN_master_prompt.md
+../Screenshot*.png
+
+# Inside burden-native
+node_modules/
+.expo/
+dist/
+ios/
+android/
+*.log

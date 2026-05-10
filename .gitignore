@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+burden-app/dist/
+burden-native/dist/
+burden-native/web-build/
+burden-native/.expo/
+burden-native/ios/
+burden-native/android/
+
+# Logs
+*.log
+.DS_Store
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+
+# Scratch
+DELETE_REVIEW_*/
