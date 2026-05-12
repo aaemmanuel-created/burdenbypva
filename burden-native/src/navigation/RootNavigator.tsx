@@ -9,6 +9,7 @@ import type { RootStackParamList, TabParamList } from './types';
 import { colors, font } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
 
+import HomeScreen from '../screens/HomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import GivingScreen from '../screens/GivingScreen';
 import AboutScreen from '../screens/AboutScreen';
@@ -49,6 +50,13 @@ function Tabs() {
         tabBarIconStyle: { display: 'none' },
       }}
     >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: ({ focused }) => <TabBarLabel label="Home" focused={focused} />,
+        }}
+      />
       <Tab.Screen
         name="Discover"
         component={DiscoverScreen}

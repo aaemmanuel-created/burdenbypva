@@ -23,6 +23,7 @@ const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       Tabs: {
         screens: {
+          Home: 'home',
           Discover: 'discover',
           Giving: 'giving',
           About: 'about',

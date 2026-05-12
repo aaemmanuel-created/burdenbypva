@@ -137,6 +137,61 @@ export const campaigns = [
   },
 ]
 
+// Events — both church-hosted gatherings and platform-level events.
+// `churchId: null` means BURDEN itself is the host.
+export const events = [
+  {
+    id: 'evt_redeemer_clinic_day',
+    churchId: 'ch_lagos_redeemer',
+    title: 'Makoko Clinic Day',
+    location: 'Makoko, Lagos',
+    date: '2026-05-17',
+    summary:
+      'Free clinic open to the community — paediatric, maternal, and primary care. Volunteers needed.',
+    category: 'Outreach',
+  },
+  {
+    id: 'evt_grace_sat_school_open',
+    churchId: 'ch_nairobi_grace',
+    title: 'Saturday School — Open Day',
+    location: 'Eastleigh, Nairobi',
+    date: '2026-05-24',
+    summary:
+      'Parents and donors invited to meet the children, see classrooms, and review the term plan.',
+    category: 'Community',
+  },
+  {
+    id: 'evt_burden_transparency_townhall',
+    churchId: null,
+    title: 'BURDEN Quarterly Transparency Town Hall',
+    location: 'Online — Zoom + livestream',
+    date: '2026-06-30',
+    summary:
+      'Quarterly read-out: platform volume, fees, fraud rate, payout completion. Open Q&A with the BURDEN team.',
+    category: 'Platform',
+  },
+  {
+    id: 'evt_allnations_meal_anniversary',
+    churchId: 'ch_london_allnations',
+    title: 'Wednesday Meal — Five-Year Anniversary',
+    location: 'Peckham, London',
+    date: '2026-07-08',
+    summary:
+      'Five years of the weekly community meal. Service of thanks, shared dinner, and brief programme update.',
+    category: 'Community',
+  },
+  {
+    id: 'evt_lighthouse_dedication',
+    churchId: 'ch_manila_lighthouse',
+    title: 'Fellowship Hall — Dedication Service',
+    location: 'Quezon City, Manila',
+    date: '2026-09-13',
+    summary:
+      'Service to dedicate the rebuilt fellowship hall. Donors who contributed receive a printed update on the works.',
+    category: 'Dedication',
+  },
+]
+
 export const principles = [
   'Every church and institution is verified before receiving funds.',
   'Donors see where their money is going — itemised, in plain language.',
