@@ -25,7 +25,7 @@ export default function Discover({ navigate }) {
     <main style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 28px 0' }}>
       <Label>Discover</Label>
       <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: -0.5, marginTop: 14, marginBottom: 36 }}>
-        Verified churches and campaigns.
+        Verified churches and burdens.
       </h1>
 
       {/* Filters */}
@@ -57,7 +57,7 @@ export default function Discover({ navigate }) {
 
         <input
           type="text"
-          placeholder="Search churches and campaigns…"
+          placeholder="Search churches and burdens…"
           value={query}
           onChange={e => setQuery(e.target.value)}
           style={{
@@ -137,7 +137,7 @@ export default function Discover({ navigate }) {
 
         {filtered.length === 0 && (
           <div style={{ padding: 48, color: colors.inkMuted, fontSize: 12 }}>
-            No campaigns match your filters.
+            No burdens match your filters.
           </div>
         )}
       </div>

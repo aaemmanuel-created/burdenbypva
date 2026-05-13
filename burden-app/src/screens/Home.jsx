@@ -3,12 +3,15 @@ import { Label, Rule, Progress, Badge, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches, events } from '../data/mock.js'
 
 // The home screen is a curated feed in four sections:
-//   1. Highlight of the week   — one prominently featured project
-//   2. Projects                — verified campaigns currently raising
-//   3. Churches                — verified congregations and institutions
-//   4. Events                  — upcoming services, outreach, town halls
+//   1. Burden of the week  — one prominently featured burden, the week's pick
+//   2. Burdens             — every verified burden currently raising
+//   3. Churches            — verified congregations and institutions
+//   4. Events              — upcoming services, outreach, town halls
 // Sections are separated by hairline rules. No marketing hero — donors
 // who land here are signed in and want to see what's live this week.
+// "Burdens" are the user-facing name for what the data model calls
+// "campaigns" (specific, time-bound, crowdfunded projects owned by a
+// verified church — never general tithing).
 
 export default function Home({ navigate }) {
   // Weekly highlight — picked editorially. For the demo it's the Lagos
@@ -18,12 +21,15 @@ export default function Home({ navigate }) {
 
   return (
     <main style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px' }}>
-      <SectionTitle label="Highlight of the week" />
+      <SectionTitle
+        label="Burden of the week"
+        sublabel="Pick the burden you want to carry before the Lord."
+      />
       <HighlightCard campaign={highlight} church={highlightChurch} navigate={navigate} />
 
       <Rule />
 
-      <SectionTitle label="Projects" cta="See all" onCta={() => navigate({ name: 'discover' })} />
+      <SectionTitle label="Burdens" cta="See all" onCta={() => navigate({ name: 'discover' })} />
       <CampaignGrid items={campaigns} navigate={navigate} />
 
       <Rule />
@@ -41,24 +47,34 @@ export default function Home({ navigate }) {
 
 // ─── Section title with optional CTA ──────────────────────────────────────────
 
-function SectionTitle({ label, cta, onCta }) {
+function SectionTitle({ label, sublabel, cta, onCta }) {
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-      padding: '64px 0 28px',
-    }}>
-      <Label>{label}</Label>
-      {cta && (
-        <button
-          onClick={onCta}
-          style={{
-            background: 'transparent', border: 'none',
-            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-            color: colors.inkSoft, fontWeight: 500,
-          }}
-        >{cta} →</button>
+    <div style={{ padding: '64px 0 28px' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+      }}>
+        <Label>{label}</Label>
+        {cta && (
+          <button
+            onClick={onCta}
+            style={{
+              background: 'transparent', border: 'none',
+              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+              color: colors.inkSoft, fontWeight: 500,
+            }}
+          >{cta} →</button>
+        )}
+      </div>
+      {sublabel && (
+        <p style={{
+          marginTop: 14,
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: colors.inkSoft,
+          maxWidth: 640,
+        }}>{sublabel}</p>
       )}
     </div>
   )
@@ -139,7 +155,7 @@ function HighlightCard({ campaign, church, navigate }) {
         letterSpacing: 2,
         textTransform: 'uppercase',
         fontWeight: 500,
-      }}>View campaign</div>
+      }}>View burden</div>
     </button>
   )
 }
@@ -153,7 +169,7 @@ function Stat({ label, value }) {
   )
 }
 
-// ─── Projects grid ────────────────────────────────────────────────────────────
+// ─── Burdens grid ─────────────────────────────────────────────────────────────
 
 function CampaignGrid({ items, navigate }) {
   return (

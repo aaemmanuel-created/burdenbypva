@@ -21,7 +21,7 @@ export default function Give({ id, navigate, recordGift }) {
   if (!campaign) {
     return (
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '64px 28px' }}>
-        <p>Campaign not found.</p>
+        <p>Burden not found.</p>
         <Button onClick={() => navigate({ name: 'discover' })}>Back to Discover</Button>
       </main>
     )
