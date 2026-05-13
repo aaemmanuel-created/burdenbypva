@@ -6,7 +6,7 @@ Vite + React 18 web build of BURDEN. JetBrains Mono throughout, minimal aestheti
 
 ```bash
 npm install
-npm run dev          # http://localhost:5174/burden/
+npm run dev          # http://localhost:5174/burdenbypva/
 ```
 
 ## Build
@@ -27,9 +27,9 @@ Push to `main`. `.github/workflows/deploy.yml` builds and publishes to GitHub Pa
 One-time setup on the repo:
 1. **Settings → Pages → Source** = "GitHub Actions"
 2. The first deploy populates the URL; it will look like
-   `https://<user>.github.io/burden/` (matches the `base: '/burden/'` in `vite.config.js`).
+   `https://<user>.github.io/burdenbypva/` (matches the `base: '/burdenbypva/'` in `vite.config.js`).
 
-If the repo name isn't `burden`, update `base` in `vite.config.js` accordingly.
+If the repo name isn't `burdenbypva`, update `base` in `vite.config.js` accordingly.
 
 ### Manual
 

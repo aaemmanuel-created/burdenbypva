@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/burden/',
+  base: '/burdenbypva/',
   server: {
     port: 5174,
   },
