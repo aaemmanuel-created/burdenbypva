@@ -24,3 +24,6 @@ burden-native/android/
 
 # Scratch
 DELETE_REVIEW_*/
+
+# Per-machine Claude permission overrides — never commit
+.claude/settings.local.json
