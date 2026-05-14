@@ -73,7 +73,6 @@ jobs:
         run: npx vite build --base "$PREVIEW_BASE"
 
       - name: Deploy to previews repo
-        working-directory: .
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.PREVIEW_DEPLOY_TOKEN }}
@@ -86,7 +85,6 @@ jobs:
 
       - name: Find associated PR
         id: pr
-        working-directory: .
         uses: actions/github-script@v7
         with:
           script: |
@@ -101,7 +99,6 @@ jobs:
 
       - name: Sticky PR comment with preview URL
         if: steps.pr.outputs.number != ''
-        working-directory: .
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           number: ${{ steps.pr.outputs.number }}
