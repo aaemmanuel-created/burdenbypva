@@ -1,6 +1,18 @@
 # CLAUDE.md — BURDEN by PVA
 
-BURDEN by PVA is a global Christian fundraising platform. The current implementation is a Vite + React web app in `burden-app/`. See `BURDEN_blueprint.md` and `BURDEN_master_prompt.md` for the full product spec.
+BURDEN by PVA is a global Christian fundraising platform. The current implementation is a Vite + React web app in `burden-app/` and an Expo wrapper in `burden-native/`. See `BURDEN_blueprint.md` and `BURDEN_master_prompt.md` for the full product spec.
+
+## ⚠️ Read the shared workflow first
+
+Before doing anything, also read:
+
+- **`../_workflow/PVA-WORKFLOW.md`** — the cross-app dispatch / build / permissions workflow. Defines the **Standard build loop** that this folder's `.claude/settings.json` enforces, and the parity rule (every change ships to web + iOS + Android).
+- **`../_workflow/DISPATCH-PROMPTS/`** — drop-in prompts for bugfix, feature, OTA push, dependency bump, store-readiness, brand pass, cleanup, inbox drain, and parity check.
+- **`../_workflow/INBOX.md`** — one-line dispatch requests Emmanuel drops in from his phone.
+
+The "Auto-permissions" agreement below is now actually executable via `.claude/settings.json` (see `../_workflow/proposed-settings/INSTALL.md` if it isn't installed yet).
+
+BURDEN has **three surfaces** that must stay at feature parity: web (`burden-app/`), iOS and Android (`burden-native/`). End every change-the-app session with a parity status line per `PVA-WORKFLOW.md` §1.
 
 ---
 
