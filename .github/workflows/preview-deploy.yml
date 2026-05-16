@@ -70,6 +70,7 @@ jobs:
       - name: Build (with preview base path)
         env:
           PREVIEW_BASE: /burdenbypva-previews/preview/${{ steps.slug.outputs.value }}/
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
         run: npx vite build --base "$PREVIEW_BASE"
 
       - name: Deploy to previews repo
