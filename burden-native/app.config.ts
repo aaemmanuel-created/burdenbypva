@@ -44,6 +44,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   plugins: ['expo-font'],
 
+  updates: {
+    url: 'https://u.expo.dev/7661727e-15da-4be3-a8bc-3c4c35b9cc20',
+  },
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+
   extra: {
     eas: {
       projectId: '7661727e-15da-4be3-a8bc-3c4c35b9cc20',
