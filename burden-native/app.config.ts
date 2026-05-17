@@ -42,7 +42,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/favicon.png',
   },
 
-  plugins: ['expo-font'],
+  plugins: [
+    'expo-font',
+    [
+      '@sentry/react-native/expo',
+      {
+        url: 'https://sentry.io/',
+        organization: 'pva-6m',
+        project: 'burdenbypva',
+      },
+    ],
+  ],
 
   updates: {
     url: 'https://u.expo.dev/7661727e-15da-4be3-a8bc-3c4c35b9cc20',
