@@ -1,0 +1,107 @@
+# .github/workflows/eas-update-preview.yml — BURDEN
+#
+# On every push to a feature-style branch that touches `burden-native/`,
+# publish the new JS bundle to the EAS Update `preview` channel. The
+# development-client build of BURDEN installed on Emmanuel's phone polls
+# this channel on launch and reloads with the new bundle.
+#
+# NOTE: BURDEN's native wrapper credentials are still in progress per the
+# parent workflow doc. EAS Update itself doesn't need store credentials —
+# it only needs EXPO_TOKEN + a dev-client build installed on the phone.
+# So this workflow can ship now; the gate is doing the one-time dev-client
+# build + install. See STABLE-PREVIEW-SETUP.md §3.
+#
+# Pair with preview-deploy.yml — that one updates the bookmarkable web
+# URL; this one updates what the on-phone dev client shows.
+#
+# Prerequisites in the BURDEN repo:
+#   1. Secret EXPO_TOKEN — Expo access token.
+#   2. `burden-native/eas.json` includes a `preview` channel and a `development`
+#      build profile that targets it.
+#   3. A development-client build is installed on Emmanuel's phone for both
+#      iOS and Android. One-time.
+#
+# Drop at .github/workflows/eas-update-preview.yml in the BURDEN repo.
+
+name: eas-update-preview
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'chore/**'
+      - 'bugfix/**'
+      - 'docs/**'
+      - 'refactor/**'
+      - 'wip/**'
+    paths:
+      - 'burden-native/**'
+
+concurrency:
+  group: eas-update-preview-burden-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: burden-native
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: burden-native/package-lock.json
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Publish to preview channel
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          MSG="${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}"
+          npx eas-cli update \
+            --branch preview \
+            --message "$MSG" \
+            --non-interactive
+
+      - name: Find associated PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+            });
+            if (prs.data.length === 0) { core.setOutput('number', ''); return; }
+            core.setOutput('number', String(prs.data[0].number));
+
+      - name: Sticky PR comment with EAS update info
+        if: steps.pr.outputs.number != ''
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          number: ${{ steps.pr.outputs.number }}
+          header: pva-eas-update
+          message: |
+            📱 **EAS Update published — `preview` channel**
+
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+
+            Open the BURDEN dev-client build on your phone (TestFlight / Play internal). It polls the `preview` channel on launch and downloads this bundle. If the app is already open, force-quit and reopen.
+
+            This is a JS-only update (no native rebuild). For native module changes you still need a full `eas build` via the standard ship flow.
