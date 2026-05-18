@@ -56,11 +56,11 @@ export default function Splash({ onDismiss }) {
         fontFamily: HELVETICA,
       }}
     >
+      {/* Match Home's left-padding so this text sits on the same vertical
+          column as the BURDEN wordmark + titles on the next page. */}
       <div style={{
         width: '100%',
-        maxWidth: 1080,
-        margin: '0 auto',
-        padding: '0 32px',
+        padding: '0 36px',
       }}>
         <p style={{
           fontFamily: HELVETICA,

@@ -11,6 +11,7 @@ import { campaigns } from '../data/mock.js'
 // which is suppressed on this route (see App.jsx / Header.jsx).
 
 const HELVETICA = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace'
 const NAVY = '#0e1b3a'
 const NAVY_MUTED = '#9aa0b3'
 
@@ -47,23 +48,27 @@ export default function Home({ navigate }) {
         display: 'flex',
         flexDirection: 'column',
       }}>
-        {/* Stacked wordmark — top-left */}
+        {/* Stacked wordmark — top-left, JetBrains Mono.
+            Both lines share the same left edge as the title stack
+            below (the parent <main>'s left padding). The trailing
+            letter-spacing on BY PVA only affects spacing AFTER each
+            glyph, so the first letter stays flush with BURDEN's B. */}
         <div>
           <div style={{
-            fontFamily: HELVETICA,
+            fontFamily: MONO,
             fontWeight: 700,
-            fontSize: 'clamp(28px, 5vw, 36px)',
-            letterSpacing: 0.5,
+            fontSize: 'clamp(26px, 5vw, 34px)',
+            letterSpacing: 0,
             color: NAVY,
             lineHeight: 1,
           }}>BURDEN</div>
           <div style={{
-            fontFamily: HELVETICA,
+            fontFamily: MONO,
             fontWeight: 400,
-            fontSize: 'clamp(11px, 1.4vw, 13px)',
+            fontSize: 'clamp(10px, 1.3vw, 12px)',
             letterSpacing: 4,
             color: NAVY_MUTED,
-            marginTop: 6,
+            marginTop: 8,
           }}>BY PVA</div>
         </div>
 
