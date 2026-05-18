@@ -1,57 +1,104 @@
 import { colors } from '../theme.js'
 import { campaigns } from '../data/mock.js'
 
-// Home — page 2 of the app (page 1 is the splash).
+// Home — page 2 of the app. Designed to match the supplied screenshot:
+//   • a soft glassy pastel-blue background covering the whole viewport
+//   • the BURDEN by PVA wordmark stacked in the top-left
+//       (BURDEN bold and large, BY PVA letter-spaced underneath)
+//   • three uppercase titles, tight stack, left-aligned, navy
 //
-// By design this page is a menu, nothing more: the BURDEN by PVA wordmark
-// at the top (rendered by Header) and three section titles below. All
-// titles in Helvetica, weight 300, not bold. Clicking a title takes you
-// to its dedicated screen — no tile grids, no intro paragraph, no other
-// content lives on this page.
+// The page's own background and wordmark override the global Header,
+// which is suppressed on this route (see App.jsx / Header.jsx).
 
 const HELVETICA = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+const NAVY = '#0e1b3a'
+const NAVY_MUTED = '#9aa0b3'
+
+// Frosted glass — layered radial gradients on a cool light base. Cooler
+// blue blobs at top-left and bottom-right echo the screenshot's haze.
+const GLASS_BG = `
+  radial-gradient(ellipse 70% 55% at 20% 15%, rgba(210, 222, 244, 0.65) 0%, rgba(210, 222, 244, 0) 65%),
+  radial-gradient(ellipse 65% 55% at 85% 90%, rgba(178, 199, 235, 0.55) 0%, rgba(178, 199, 235, 0) 65%),
+  radial-gradient(ellipse 90% 60% at 50% 50%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%),
+  linear-gradient(165deg, #eaeef7 0%, #dde5f2 55%, #e8edf6 100%)
+`
 
 export default function Home({ navigate }) {
-  // BURDEN OF THE WEEK opens the editor's weekly pick directly.
   const highlightId = campaigns.find(c => c.id === 'cmp_redeemer_clinic')?.id
 
   const titles = [
     { label: 'BURDEN OF THE WEEK', go: () => navigate({ name: 'campaign', id: highlightId }) },
-    { label: 'BURDEN',             go: () => navigate({ name: 'discover' }) },
+    { label: 'BURDENS',            go: () => navigate({ name: 'discover' }) },
     { label: 'SPREE',              go: () => navigate({ name: 'spree' }) },
   ]
 
   return (
-    <main style={{
-      maxWidth: 1080,
-      margin: '0 auto',
-      padding: '0 28px',
-      minHeight: 'calc(100vh - 160px)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'flex-start',
-      gap: 'clamp(28px, 6vh, 64px)',
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: GLASS_BG,
+      overflow: 'auto',
     }}>
-      {titles.map(t => (
-        <button
-          key={t.label}
-          onClick={t.go}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            textAlign: 'left',
-            cursor: 'pointer',
+      <main style={{
+        position: 'relative',
+        minHeight: '100vh',
+        padding: '36px 36px 64px',
+        fontFamily: HELVETICA,
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* Stacked wordmark — top-left */}
+        <div>
+          <div style={{
             fontFamily: HELVETICA,
-            fontWeight: 300,
-            fontSize: 'clamp(20px, 3.4vw, 38px)',
-            letterSpacing: -0.3,
-            lineHeight: 1.1,
-            color: colors.ink,
-          }}
-        >{t.label}</button>
-      ))}
-    </main>
+            fontWeight: 700,
+            fontSize: 'clamp(28px, 5vw, 36px)',
+            letterSpacing: 0.5,
+            color: NAVY,
+            lineHeight: 1,
+          }}>BURDEN</div>
+          <div style={{
+            fontFamily: HELVETICA,
+            fontWeight: 400,
+            fontSize: 'clamp(11px, 1.4vw, 13px)',
+            letterSpacing: 4,
+            color: NAVY_MUTED,
+            marginTop: 6,
+          }}>BY PVA</div>
+        </div>
+
+        {/* Three titles — clustered roughly in the middle, tight stack */}
+        <div style={{
+          marginTop: 'auto',
+          marginBottom: 'auto',
+          paddingTop: 'clamp(48px, 14vh, 140px)',
+          paddingBottom: 'clamp(48px, 14vh, 140px)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'clamp(4px, 1.2vh, 12px)',
+          alignItems: 'flex-start',
+        }}>
+          {titles.map(t => (
+            <button
+              key={t.label}
+              onClick={t.go}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontFamily: HELVETICA,
+                fontWeight: 500,
+                fontSize: 'clamp(26px, 5vw, 38px)',
+                letterSpacing: 0.5,
+                lineHeight: 1.25,
+                color: NAVY,
+              }}
+            >{t.label}</button>
+          ))}
+        </div>
+      </main>
+    </div>
   )
 }

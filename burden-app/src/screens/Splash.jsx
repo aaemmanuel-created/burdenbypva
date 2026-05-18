@@ -1,36 +1,39 @@
 import { useEffect, useState } from 'react'
 import { colors } from '../theme.js'
 
-// Splash — the moment the app opens. Reverent welcome in Helvetica
-// (everything else in the app is JetBrains Mono — this is the one place
-// the typography breaks for intentional warmth).
-//
-// Layout: text is anchored centre-left of the page — vertically centred,
-// horizontally pinned to the left of a centred content column — and reads
-// as a short sentence-style paragraph rather than a single headline.
-//
-// Dismisses on tap, on key press, or automatically after 4 seconds.
+// Splash — page 1. Fades in on mount, fades out on dismiss. The text
+// reads as a single short sentence, left-aligned within the centred
+// page column.
 
 const HELVETICA = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
+// Phases drive the opacity transition:
+//   entering → 0 (briefly, so we can transition to 1)
+//   visible  → 1
+//   leaving  → 0 (fading out before unmount)
+const FADE_MS = 700
+
 export default function Splash({ onDismiss }) {
-  const [leaving, setLeaving] = useState(false)
+  const [phase, setPhase] = useState('entering')
 
   useEffect(() => {
-    // Gentle pulse — like a doorbell, not an alarm.
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate([12, 80, 18]) } catch { /* no-op */ }
+      try { navigator.vibrate([10, 80, 14]) } catch { /* no-op */ }
     }
-    const t = setTimeout(() => dismiss(), 4000)
-    return () => clearTimeout(t)
+    // Next frame, flip to visible so the opacity transition runs.
+    const raf = requestAnimationFrame(() => setPhase('visible'))
+    // Auto-dismiss after a moment of stillness.
+    const t = setTimeout(() => dismiss(), 4200)
+    return () => { cancelAnimationFrame(raf); clearTimeout(t) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function dismiss() {
-    if (leaving) return
-    setLeaving(true)
-    setTimeout(onDismiss, 320)
+    setPhase((p) => (p === 'leaving' ? p : 'leaving'))
+    setTimeout(onDismiss, FADE_MS)
   }
+
+  const opacity = phase === 'visible' ? 1 : 0
 
   return (
     <div
@@ -48,35 +51,11 @@ export default function Splash({ onDismiss }) {
         alignItems: 'stretch',
         zIndex: 100,
         cursor: 'pointer',
-        opacity: leaving ? 0 : 1,
-        transition: 'opacity 320ms ease-out',
+        opacity,
+        transition: `opacity ${FADE_MS}ms ease`,
         fontFamily: HELVETICA,
       }}
     >
-      {/* BURDEN by PVA — top-left wordmark, Helvetica, not bold */}
-      <div style={{
-        position: 'absolute',
-        top: 28,
-        left: 32,
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 10,
-        fontFamily: HELVETICA,
-        fontWeight: 400,
-      }}>
-        <span style={{
-          fontSize: 14,
-          letterSpacing: 4,
-          color: colors.ink,
-        }}>BURDEN</span>
-        <span style={{
-          fontSize: 9,
-          letterSpacing: 2,
-          color: colors.inkMuted,
-        }}>by PVA</span>
-      </div>
-
-      {/* Centre-left text column — anchored to the left of a centred max-width wrapper */}
       <div style={{
         width: '100%',
         maxWidth: 1080,
@@ -87,7 +66,7 @@ export default function Splash({ onDismiss }) {
           fontFamily: HELVETICA,
           fontWeight: 300,
           fontSize: 'clamp(16px, 2.2vw, 26px)',
-          lineHeight: 1.35,
+          lineHeight: 1.45,
           letterSpacing: -0.2,
           color: colors.ink,
           textAlign: 'left',
@@ -96,21 +75,6 @@ export default function Splash({ onDismiss }) {
         }}>
           Thank you for supporting a burden today.
         </p>
-      </div>
-
-      <div style={{
-        position: 'absolute',
-        bottom: 28,
-        left: 32,
-        right: 32,
-        fontFamily: HELVETICA,
-        fontSize: 11,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        color: colors.inkMuted,
-        textAlign: 'left',
-      }}>
-        Tap to continue
       </div>
     </div>
   )
