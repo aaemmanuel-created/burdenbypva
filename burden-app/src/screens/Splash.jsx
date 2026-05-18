@@ -86,18 +86,15 @@ export default function Splash({ onDismiss }) {
         <p style={{
           fontFamily: HELVETICA,
           fontWeight: 300,
-          fontSize: 'clamp(22px, 4.4vw, 44px)',
+          fontSize: 'clamp(16px, 2.2vw, 26px)',
           lineHeight: 1.35,
-          letterSpacing: -0.3,
+          letterSpacing: -0.2,
           color: colors.ink,
           textAlign: 'left',
-          maxWidth: 760,
+          maxWidth: 640,
           margin: 0,
         }}>
-          Thank you for opening BURDEN today. Below are the burdens our verified
-          churches are carrying — schools, clinics, a fellowship hall under
-          repair, a Wednesday meal. Read one. Pray, if you can. Then give what
-          you can.
+          Thank you for supporting a burden today.
         </p>
       </div>
 

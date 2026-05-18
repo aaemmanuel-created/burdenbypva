@@ -45,9 +45,9 @@ export default function Home({ navigate }) {
             cursor: 'pointer',
             fontFamily: HELVETICA,
             fontWeight: 300,
-            fontSize: 'clamp(36px, 8vw, 80px)',
-            letterSpacing: -0.5,
-            lineHeight: 1.05,
+            fontSize: 'clamp(20px, 3.4vw, 38px)',
+            letterSpacing: -0.3,
+            lineHeight: 1.1,
             color: colors.ink,
           }}
         >{t.label}</button>
