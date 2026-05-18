@@ -1,6 +1,8 @@
 import { colors } from '../theme.js'
 import { formatMoney } from './UI.jsx'
 
+const HELVETICA = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+
 export default function Header({ route, navigate, givingCount, creditBalance = 0 }) {
   const items = [
     { id: 'discover', label: 'Discover' },
@@ -36,20 +38,23 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
             alignItems: 'baseline',
             gap: 10,
             cursor: 'pointer',
+            fontFamily: HELVETICA,
           }}
         >
           <span style={{
             fontSize: 14,
-            letterSpacing: 6,
-            fontWeight: 700,
+            letterSpacing: 4,
+            fontWeight: 400,
             color: colors.ink,
+            fontFamily: HELVETICA,
           }}>BURDEN</span>
           <span style={{
             fontSize: 9,
-            letterSpacing: 3,
+            letterSpacing: 2,
             color: colors.inkMuted,
             fontWeight: 400,
-          }}>BY PVA</span>
+            fontFamily: HELVETICA,
+          }}>by PVA</span>
         </button>
 
         <nav style={{ display: 'flex', gap: 28, alignItems: 'baseline', flexWrap: 'wrap' }}>
