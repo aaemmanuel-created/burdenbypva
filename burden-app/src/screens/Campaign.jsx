@@ -1,5 +1,5 @@
-import { colors } from '../theme.js'
-import { Button, Label, Rule, Progress, Badge, formatMoney } from '../components/UI.jsx'
+import { colors, tile } from '../theme.js'
+import { Button, Label, Rule, Progress, Badge, Tile, FundingBanner, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches } from '../data/mock.js'
 
 // Burden detail. The user-facing word is "burden" — the data model still
@@ -195,45 +195,56 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
         </div>
 
         {/* Right — give panel */}
-        <aside style={{
-          position: 'sticky',
-          top: 92,
-          border: '1px solid ' + colors.rule,
-          padding: 24,
-          background: colors.bgAlt,
-        }}>
-          <div style={{ marginBottom: 18 }}>
-            <Progress value={burden.raised} goal={burden.goal} />
-          </div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            marginBottom: 24,
-          }}>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 500 }}>{formatMoney(burden.raised)}</div>
-              <div style={{ fontSize: 10, color: colors.inkMuted, letterSpacing: 1, marginTop: 4 }}>
-                of {formatMoney(burden.goal)} ({pct}%)
+        <aside style={{ position: 'sticky', top: 92 }}>
+          <Tile flat as="div" padding={24} style={{ gap: 18 }}>
+            <FundingBanner raised={burden.raised} goal={burden.goal} />
+
+            <Progress value={burden.raised} goal={burden.goal} onNavy />
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+            }}>
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 500, color: tile.ink }}>
+                  {formatMoney(burden.raised)}
+                </div>
+                <div style={{ fontSize: 10, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
+                  of {formatMoney(burden.goal)} ({pct}%)
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 16, fontWeight: 500, color: tile.ink }}>{burden.donors}</div>
+                <div style={{ fontSize: 10, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
+                  donors
+                </div>
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 16, fontWeight: 500 }}>{burden.donors}</div>
-              <div style={{ fontSize: 10, color: colors.inkMuted, letterSpacing: 1, marginTop: 4 }}>
-                donors
-              </div>
-            </div>
-          </div>
 
-          <Button
-            full
-            onClick={() => navigate({ name: 'give', id: burden.id })}
-          >Carry this burden — give</Button>
+            <button
+              onClick={() => navigate({ name: 'give', id: burden.id })}
+              style={{
+                width: '100%',
+                padding: '14px 22px',
+                background: '#fff',
+                color: colors.navyDeep,
+                border: 'none',
+                fontSize: 11,
+                letterSpacing: 2,
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                borderRadius: 999,
+                cursor: 'pointer',
+                boxShadow: '0 6px 14px -6px rgba(0,0,0,0.55)',
+              }}
+            >Carry this burden — give</button>
 
-          <p style={{ marginTop: 18, fontSize: 10, color: colors.inkMuted, lineHeight: 1.6, letterSpacing: 0.3 }}>
-            Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
-            Anonymous and recurring options available at checkout.
-          </p>
+            <p style={{ marginTop: 4, fontSize: 10, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
+              Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
+              Anonymous and recurring options available at checkout.
+            </p>
+          </Tile>
         </aside>
       </div>
     </main>

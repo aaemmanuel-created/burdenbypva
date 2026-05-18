@@ -1,10 +1,12 @@
 import { colors } from '../theme.js'
+import { formatMoney } from './UI.jsx'
 
-export default function Header({ route, navigate, givingCount }) {
+export default function Header({ route, navigate, givingCount, creditBalance = 0 }) {
   const items = [
     { id: 'discover', label: 'Discover' },
-    { id: 'history', label: 'Giving' },
-    { id: 'about', label: 'About' },
+    { id: 'history',  label: 'Giving' },
+    { id: 'profile',  label: 'Profile' },
+    { id: 'about',    label: 'About' },
   ]
   return (
     <header style={{
@@ -22,6 +24,7 @@ export default function Header({ route, navigate, givingCount }) {
         alignItems: 'baseline',
         justifyContent: 'space-between',
         gap: 32,
+        flexWrap: 'wrap',
       }}>
         <button
           onClick={() => navigate({ name: 'home' })}
@@ -32,6 +35,7 @@ export default function Header({ route, navigate, givingCount }) {
             display: 'flex',
             alignItems: 'baseline',
             gap: 10,
+            cursor: 'pointer',
           }}
         >
           <span style={{
@@ -48,7 +52,7 @@ export default function Header({ route, navigate, givingCount }) {
           }}>BY PVA</span>
         </button>
 
-        <nav style={{ display: 'flex', gap: 28 }}>
+        <nav style={{ display: 'flex', gap: 28, alignItems: 'baseline', flexWrap: 'wrap' }}>
           {items.map(it => {
             const active = route.name === it.id
             return (
@@ -65,6 +69,7 @@ export default function Header({ route, navigate, givingCount }) {
                   color: active ? colors.ink : colors.inkSoft,
                   fontWeight: active ? 600 : 400,
                   borderBottom: active ? '1px solid ' + colors.ink : '1px solid transparent',
+                  cursor: 'pointer',
                 }}
               >
                 {it.label}
@@ -78,6 +83,24 @@ export default function Header({ route, navigate, givingCount }) {
               </button>
             )
           })}
+          {creditBalance > 0 && (
+            <button
+              onClick={() => navigate({ name: 'profile' })}
+              style={{
+                background: colors.ink,
+                color: colors.accentInk,
+                border: 'none',
+                borderRadius: 999,
+                padding: '6px 12px',
+                fontSize: 10,
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              aria-label={`Account credit ${formatMoney(creditBalance)}`}
+            >Credit · {formatMoney(creditBalance)}</button>
+          )}
         </nav>
       </div>
     </header>

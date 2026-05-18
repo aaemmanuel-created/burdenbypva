@@ -5,7 +5,7 @@ import { campaigns, churches } from '../data/mock.js'
 
 const PRESETS = [5, 25, 100, 500]
 
-export default function Give({ id, navigate, recordGift }) {
+export default function Give({ id, navigate, recordGift, profile }) {
   const campaign = campaigns.find(c => c.id === id)
   const church = campaign && churches.find(ch => ch.id === campaign.churchId)
 
@@ -14,7 +14,8 @@ export default function Give({ id, navigate, recordGift }) {
   const [recurring, setRecurring] = useState(false)
   const [anonymous, setAnonymous] = useState(false)
   const [coverFee, setCoverFee] = useState(true)
-  const [name, setName] = useState('')
+  const [useCredit, setUseCredit] = useState(false)
+  const [name, setName] = useState(profile?.name || '')
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
@@ -27,9 +28,11 @@ export default function Give({ id, navigate, recordGift }) {
     )
   }
 
+  const credit = profile?.creditBalance ?? 0
   const value = custom !== '' ? Number(custom) || 0 : amount
   const fee = coverFee ? Math.round((value * 0.045 + 0.30) * 100) / 100 : 0
   const total = Math.round((value + fee) * 100) / 100
+  const creditCovers = useCredit && credit >= value && value >= 1
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -44,6 +47,7 @@ export default function Give({ id, navigate, recordGift }) {
       total,
       recurring,
       anonymous,
+      fromCredit: creditCovers,
       donor: anonymous ? null : { name, email },
       timestamp: new Date().toISOString(),
     })
@@ -79,7 +83,7 @@ export default function Give({ id, navigate, recordGift }) {
         style={{
           background: 'transparent', border: 'none', padding: 0,
           fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-          color: colors.inkSoft, marginBottom: 32,
+          color: colors.inkSoft, marginBottom: 32, cursor: 'pointer',
         }}
       >← {campaign.title}</button>
 
@@ -115,6 +119,7 @@ export default function Give({ id, navigate, recordGift }) {
                   border: '1px solid ' + colors.rule,
                   fontSize: 13,
                   fontWeight: 500,
+                  cursor: 'pointer',
                 }}
               >${p}</button>
             ))}
@@ -134,12 +139,27 @@ export default function Give({ id, navigate, recordGift }) {
               fontSize: 13,
               color: colors.ink,
               outline: 'none',
+              boxSizing: 'border-box',
             }}
           />
         </div>
 
         {/* Toggles */}
         <div style={{ marginBottom: 36 }}>
+          {credit > 0 && (
+            <Toggle
+              checked={useCredit}
+              onChange={(v) => {
+                setUseCredit(v)
+                // Covering a fee from a card while paying from credit is
+                // confusing — turn the fee-cover toggle off when credit pays.
+                if (v) setCoverFee(false)
+              }}
+              label={`Pay from account credit (${formatMoney(credit)} available)`}
+              help={value > credit
+                ? `Gift is ${formatMoney(value)} — only ${formatMoney(credit)} in credit. Reduce the amount or top up to use credit.`
+                : 'Your account credit is held in BURDEN escrow. Switch off to pay by card instead.'} />
+          )}
           <Toggle checked={recurring} onChange={setRecurring}
             label="Make this a monthly gift"
             help="Cancel any time from your giving history." />
@@ -181,14 +201,18 @@ export default function Give({ id, navigate, recordGift }) {
           <div>
             <Label>Total today</Label>
             <div style={{ marginTop: 6, fontSize: 11, color: colors.inkMuted }}>
-              {recurring ? 'and monthly thereafter' : 'one-time gift'}
+              {creditCovers
+                ? 'paid from account credit'
+                : (recurring ? 'and monthly thereafter' : 'one-time gift')}
             </div>
           </div>
-          <div style={{ fontSize: 28, fontWeight: 500 }}>{formatMoney(total)}</div>
+          <div style={{ fontSize: 28, fontWeight: 500 }}>{formatMoney(creditCovers ? value : total)}</div>
         </div>
 
-        <Button type="submit" full disabled={value < 1 || (!anonymous && (!name || !email))}>
-          Give {formatMoney(total)}
+        <Button type="submit" full disabled={value < 1 || (!anonymous && (!name || !email)) || (useCredit && value > credit)}>
+          {creditCovers
+            ? `Give ${formatMoney(value)} from credit`
+            : `Give ${formatMoney(total)}`}
         </Button>
 
         <p style={{ marginTop: 18, fontSize: 10, color: colors.inkMuted, lineHeight: 1.6, letterSpacing: 0.3 }}>
@@ -208,6 +232,7 @@ const inputStyle = {
   fontSize: 13,
   color: colors.ink,
   outline: 'none',
+  boxSizing: 'border-box',
 }
 
 function Toggle({ checked, onChange, label, help }) {
@@ -231,6 +256,7 @@ function Toggle({ checked, onChange, label, help }) {
           flexShrink: 0,
           marginTop: 2,
           padding: 0,
+          cursor: 'pointer',
         }}
         aria-pressed={checked}
       />
