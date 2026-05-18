@@ -10,9 +10,12 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
     { id: 'profile',  label: 'Profile' },
     { id: 'about',    label: 'About' },
   ]
+  // On Home (page 2) we deliberately hide the right-side nav and credit
+  // chip — the page is just the wordmark + three big titles.
+  const onHome = route.name === 'home'
   return (
     <header style={{
-      borderBottom: '1px solid ' + colors.rule,
+      borderBottom: onHome ? 'none' : '1px solid ' + colors.rule,
       background: colors.bg,
       position: 'sticky',
       top: 0,
@@ -57,7 +60,10 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
           }}>by PVA</span>
         </button>
 
-        <nav style={{ display: 'flex', gap: 28, alignItems: 'baseline', flexWrap: 'wrap' }}>
+        <nav style={{
+          display: onHome ? 'none' : 'flex',
+          gap: 28, alignItems: 'baseline', flexWrap: 'wrap',
+        }}>
           {items.map(it => {
             const active = route.name === it.id
             return (

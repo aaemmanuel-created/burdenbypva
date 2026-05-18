@@ -8,6 +8,7 @@ import Campaign from './screens/Campaign.jsx'
 import Give from './screens/Give.jsx'
 import History from './screens/History.jsx'
 import Profile from './screens/Profile.jsx'
+import Spree from './screens/Spree.jsx'
 import About from './screens/About.jsx'
 
 // Joined prayer groups, recorded gifts, the splash gate, account credit,
@@ -91,9 +92,10 @@ export default function App() {
         updateName={updateName}
       />
     ); break
+    case 'spree':    screen = <Spree navigate={navigate} profile={profile} />; break
     case 'about':    screen = <About />; break
     case 'home':
-    default:         screen = <Home navigate={navigate} profile={profile} />; break
+    default:         screen = <Home navigate={navigate} />; break
   }
 
   return (
