@@ -53,7 +53,7 @@ export function Progress({ value, goal, onNavy }) {
     <div style={{ width: '100%' }}>
       <div style={{
         height: 3,
-        background: onNavy ? 'rgba(255,255,255,0.10)' : colors.ruleSoft,
+        background: onNavy ? 'rgba(10, 20, 48, 0.12)' : colors.ruleSoft,
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 2,
@@ -62,7 +62,7 @@ export function Progress({ value, goal, onNavy }) {
           height: '100%',
           width: pct + '%',
           background: onNavy
-            ? 'linear-gradient(90deg, #9fb4dc 0%, #ffffff 100%)'
+            ? 'linear-gradient(90deg, #1f3a78 0%, #0a1430 100%)'
             : colors.ink,
           transition: 'width 400ms cubic-bezier(0.22, 1, 0.36, 1)',
         }} />
@@ -73,9 +73,9 @@ export function Progress({ value, goal, onNavy }) {
 
 export function Badge({ children, tone = 'default', onNavy }) {
   const palette = onNavy ? {
-    default: { bg: 'rgba(255,255,255,0.06)', fg: tile.ink,            border: 'rgba(255,255,255,0.20)' },
-    trust:   { bg: 'rgba(126,196,138,0.10)', fg: colors.trustOnNavy,  border: 'rgba(126,196,138,0.55)' },
-    warn:    { bg: 'rgba(224,168,107,0.10)', fg: colors.warnOnNavy,   border: 'rgba(224,168,107,0.55)' },
+    default: { bg: 'rgba(10, 20, 48, 0.04)',  fg: tile.ink,            border: 'rgba(10, 20, 48, 0.18)' },
+    trust:   { bg: 'rgba(31, 106, 61, 0.08)', fg: colors.trust,        border: 'rgba(31, 106, 61, 0.45)' },
+    warn:    { bg: 'rgba(122, 75, 29, 0.08)', fg: colors.warn,         border: 'rgba(122, 75, 29, 0.45)' },
   }[tone] : {
     default: { bg: 'transparent', fg: colors.ink,    border: colors.rule },
     trust:   { bg: 'transparent', fg: colors.trust,  border: colors.trust },
@@ -123,6 +123,8 @@ export function Tile({
   const base = {
     position: 'relative',
     background: tile.background,
+    backdropFilter: tile.backdropFilter,
+    WebkitBackdropFilter: tile.backdropFilter,
     border: tile.border,
     boxShadow: hover && !flat ? tile.shadowHover : tile.shadow,
     color: tile.ink,
@@ -134,7 +136,7 @@ export function Tile({
     flexDirection: 'column',
     width: '100%',
     cursor: onClick ? 'pointer' : 'default',
-    transform: hover && !flat ? 'translateY(-2px)' : 'translateY(0)',
+    transform: hover && !flat ? 'translateY(-3px)' : 'translateY(0)',
     transition: 'transform 220ms cubic-bezier(0.22,1,0.36,1), box-shadow 220ms ease',
     overflow: 'hidden',
     ...style,

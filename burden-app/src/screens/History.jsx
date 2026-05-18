@@ -22,8 +22,8 @@ export default function History({ gifts, navigate }) {
               onClick={() => navigate({ name: 'discover' })}
               style={{
                 padding: '12px 22px',
-                background: '#fff',
-                color: colors.navyDeep,
+                background: colors.ink,
+                color: '#fff',
                 border: 'none',
                 fontSize: 11,
                 letterSpacing: 2,
@@ -38,8 +38,8 @@ export default function History({ gifts, navigate }) {
               style={{
                 padding: '12px 22px',
                 background: 'transparent',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.6)',
+                color: tile.ink,
+                border: '1px solid rgba(10, 20, 48, 0.35)',
                 fontSize: 11,
                 letterSpacing: 2,
                 textTransform: 'uppercase',

@@ -28,6 +28,30 @@ export default function Give({ id, navigate, recordGift, profile }) {
     )
   }
 
+  // Guard against giving to a burden that's already at goal — even
+  // if a user reached this screen via a stale link or bookmark.
+  if (campaign.raised >= campaign.goal) {
+    return (
+      <main style={{ maxWidth: 640, margin: '0 auto', padding: '96px 28px' }}>
+        <Label>Fully funded</Label>
+        <h1 style={{ fontSize: 28, fontWeight: 300, letterSpacing: -0.4, marginTop: 14 }}>
+          {campaign.title}
+        </h1>
+        <p style={{ marginTop: 18, fontSize: 14, lineHeight: 1.7, color: colors.inkSoft }}>
+          This burden has already reached its {formatMoney(campaign.goal)} goal,
+          so {church?.name || 'the church'} is no longer accepting gifts toward it.
+          Thank you for wanting to help — please carry another burden in its place.
+        </p>
+        <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Button onClick={() => navigate({ name: 'discover' })}>See other burdens</Button>
+          <Button variant="ghost" onClick={() => navigate({ name: 'campaign', id: campaign.id })}>
+            Back to this burden
+          </Button>
+        </div>
+      </main>
+    )
+  }
+
   const credit = profile?.creditBalance ?? 0
   const value = custom !== '' ? Number(custom) || 0 : amount
   const fee = coverFee ? Math.round((value * 0.045 + 0.30) * 100) / 100 : 0

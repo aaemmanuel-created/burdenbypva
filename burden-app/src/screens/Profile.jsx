@@ -93,8 +93,8 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
               value={pendingName}
               onChange={e => setPendingName(e.target.value)}
               style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.18)',
+                background: 'rgba(255,255,255,0.55)',
+                border: '1px solid rgba(10, 20, 48, 0.18)',
                 color: tile.ink,
                 padding: '14px 16px',
                 fontSize: 14,
@@ -108,8 +108,8 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                 type="submit"
                 style={{
                   padding: '10px 18px',
-                  background: '#fff',
-                  color: colors.navyDeep,
+                  background: colors.ink,
+                  color: '#fff',
                   border: 'none',
                   fontSize: 10,
                   letterSpacing: 2,
@@ -119,7 +119,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                   cursor: 'pointer',
                 }}
               >Save name</button>
-              {savedName && <span style={{ fontSize: 11, color: '#7ec48a', letterSpacing: 1 }}>Saved.</span>}
+              {savedName && <span style={{ fontSize: 11, color: colors.trust, letterSpacing: 1 }}>Saved.</span>}
             </div>
           </form>
           <p style={{ fontSize: 12, color: tile.muted, lineHeight: 1.6, margin: 0 }}>
@@ -159,9 +159,9 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                     onClick={() => { setAmount(p); setCustom('') }}
                     style={{
                       padding: '12px 0',
-                      background: active ? '#fff' : 'rgba(255,255,255,0.06)',
-                      color: active ? colors.navyDeep : tile.ink,
-                      border: '1px solid ' + (active ? '#fff' : 'rgba(255,255,255,0.18)'),
+                      background: active ? colors.ink : 'rgba(255,255,255,0.45)',
+                      color: active ? '#fff' : tile.ink,
+                      border: '1px solid ' + (active ? colors.ink : 'rgba(10, 20, 48, 0.18)'),
                       fontSize: 13,
                       fontWeight: 600,
                       fontFamily: 'inherit',
@@ -182,8 +182,8 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.18)',
+                background: 'rgba(255,255,255,0.55)',
+                border: '1px solid rgba(10, 20, 48, 0.18)',
                 color: tile.ink,
                 fontSize: 13,
                 outline: 'none',
@@ -199,8 +199,8 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
               style={{
                 width: '100%',
                 padding: '14px 20px',
-                background: canAdd ? '#fff' : 'rgba(255,255,255,0.20)',
-                color: canAdd ? colors.navyDeep : 'rgba(255,255,255,0.55)',
+                background: canAdd ? colors.ink : 'rgba(10, 20, 48, 0.12)',
+                color: canAdd ? '#fff' : 'rgba(10, 20, 48, 0.45)',
                 border: 'none',
                 fontSize: 11,
                 letterSpacing: 2,
@@ -252,8 +252,8 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
             onClick={() => navigate({ name: 'discover' })}
             style={{
               padding: '12px 22px',
-              background: '#fff',
-              color: colors.navyDeep,
+              background: colors.ink,
+              color: '#fff',
               border: 'none',
               fontSize: 11,
               letterSpacing: 2,

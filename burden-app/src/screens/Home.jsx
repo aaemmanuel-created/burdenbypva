@@ -15,14 +15,10 @@ const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace'
 const NAVY = '#0e1b3a'
 const NAVY_MUTED = '#9aa0b3'
 
-// Frosted glass — layered radial gradients on a cool light base. Cooler
-// blue blobs at top-left and bottom-right echo the screenshot's haze.
-const GLASS_BG = `
-  radial-gradient(ellipse 70% 55% at 20% 15%, rgba(210, 222, 244, 0.65) 0%, rgba(210, 222, 244, 0) 65%),
-  radial-gradient(ellipse 65% 55% at 85% 90%, rgba(178, 199, 235, 0.55) 0%, rgba(178, 199, 235, 0) 65%),
-  radial-gradient(ellipse 90% 60% at 50% 50%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%),
-  linear-gradient(165deg, #eaeef7 0%, #dde5f2 55%, #e8edf6 100%)
-`
+// Home now sits on the same plain white backdrop as the rest of the
+// app — the only blue on this screen is reserved for the glassy tiles
+// when burdens are surfaced on inner pages.
+const PAGE_BG = colors.bg
 
 export default function Home({ navigate }) {
   const highlightId = campaigns.find(c => c.id === 'cmp_redeemer_clinic')?.id
@@ -37,7 +33,7 @@ export default function Home({ navigate }) {
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: GLASS_BG,
+      background: PAGE_BG,
       overflow: 'auto',
     }}>
       <main style={{
@@ -94,9 +90,9 @@ export default function Home({ navigate }) {
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontFamily: HELVETICA,
-                fontWeight: 500,
+                fontWeight: 400,
                 fontSize: 'clamp(26px, 5vw, 38px)',
-                letterSpacing: 0.5,
+                letterSpacing: 0,
                 lineHeight: 1.25,
                 color: NAVY,
               }}

@@ -23,6 +23,9 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
   }
   const church = churches.find(ch => ch.id === burden.churchId)
   const pct = Math.round((burden.raised / burden.goal) * 100)
+  // Once a burden reaches its goal, BURDEN closes it to new gifts —
+  // we don't accept money we can't deploy.
+  const isFunded = burden.raised >= burden.goal
 
   // Itemised allocation — published in plain language per BURDEN principle.
   const items = [
@@ -222,28 +225,55 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
               </div>
             </div>
 
-            <button
-              onClick={() => navigate({ name: 'give', id: burden.id })}
-              style={{
-                width: '100%',
-                padding: '14px 22px',
-                background: '#fff',
-                color: colors.navyDeep,
-                border: 'none',
-                fontSize: 11,
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                borderRadius: 999,
-                cursor: 'pointer',
-                boxShadow: '0 6px 14px -6px rgba(0,0,0,0.55)',
-              }}
-            >Carry this burden — give</button>
+            {isFunded ? (
+              <div
+                role="status"
+                style={{
+                  width: '100%',
+                  padding: '14px 18px',
+                  background: 'rgba(46, 138, 90, 0.12)',
+                  color: '#0e3a23',
+                  border: '1px solid rgba(46, 138, 90, 0.45)',
+                  borderRadius: 12,
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{
+                  fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 600,
+                }}>Fully funded — thank you</div>
+                <div style={{ marginTop: 6, fontSize: 11, color: '#1f4c33' }}>
+                  This burden has reached its goal and is now closed to new gifts.
+                  Updates will follow as funds are deployed.
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate({ name: 'give', id: burden.id })}
+                  style={{
+                    width: '100%',
+                    padding: '14px 22px',
+                    background: colors.ink,
+                    color: '#fff',
+                    border: 'none',
+                    fontSize: 11,
+                    letterSpacing: 2,
+                    textTransform: 'uppercase',
+                    fontWeight: 600,
+                    borderRadius: 999,
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 14px -6px rgba(10,20,48,0.45)',
+                  }}
+                >Carry this burden — give</button>
 
-            <p style={{ marginTop: 4, fontSize: 10, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
-              Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
-              Anonymous and recurring options available at checkout.
-            </p>
+                <p style={{ marginTop: 4, fontSize: 10, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
+                  Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
+                  Anonymous and recurring options available at checkout.
+                </p>
+              </>
+            )}
           </Tile>
         </aside>
       </div>
