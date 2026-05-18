@@ -32,8 +32,8 @@ jobs:
       dist_dir: dist                                      # vite default; PILLAR static = "." (and set static_only: true)
       # static_only: true                                 # uncomment for PILLAR (no-build)
       node_version: '22'
-      previews_repo: aaemmanuel-created/burden-previews
-      previews_pages_host: aaemmanuel-created.github.io/burden-previews
+      previews_repo: aaemmanuel-created/burdenbypva-previews
+      previews_pages_host: aaemmanuel-created.github.io/burdenbypva-previews
     secrets:
       PREVIEW_DEPLOY_TOKEN: ${{ secrets.PREVIEW_DEPLOY_TOKEN }}
       PREVIEW_STABLE_SLUG: ${{ secrets.PREVIEW_STABLE_SLUG }}
