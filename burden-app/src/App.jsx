@@ -1,34 +1,32 @@
-import { useState, useCallback } from 'react'
-import Header from './components/Header.jsx'
-import Footer from './components/Footer.jsx'
+import { useCallback, useState } from 'react'
 import Splash from './screens/Splash.jsx'
 import Home from './screens/Home.jsx'
 import Discover from './screens/Discover.jsx'
+import List from './screens/List.jsx'
 import Campaign from './screens/Campaign.jsx'
-import Give from './screens/Give.jsx'
-import History from './screens/History.jsx'
-import About from './screens/About.jsx'
 
-// Joined prayer groups, recorded gifts, and the splash gate all live in
-// App state. No persistence yet — refresh resets everything.
+// Mobile-first single-screen app. Five surfaces:
+//   intro    splash (Helvetica thank-you, tap to continue)
+//   home     menu (BURDEN by PVA + three entry points)
+//   list     "Burden of the Week" or "Spree" list with extras
+//   deck     "Burdens" horizontal swipe carousel
+//   campaign single-burden detail
+//
+// Routing is state-based so the app stays fully self-contained — no router
+// dependency, no URL state, no server side. Joined prayer groups live in
+// App state and persist to localStorage from the detail screen.
 
 export default function App() {
   const [splashShown, setSplashShown] = useState(true)
   const [route, setRoute] = useState({ name: 'home' })
-  const [gifts, setGifts] = useState([])
   const [joinedPrayerGroups, setJoinedPrayerGroups] = useState(new Set())
 
   const navigate = useCallback((next) => {
     setRoute(next)
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [])
-
-  const recordGift = useCallback((gift) => {
-    setGifts(prev => [...prev, gift])
   }, [])
 
   const togglePrayerGroup = useCallback((burdenId) => {
-    setJoinedPrayerGroups(prev => {
+    setJoinedPrayerGroups((prev) => {
       const next = new Set(prev)
       if (next.has(burdenId)) next.delete(burdenId); else next.add(burdenId)
       return next
@@ -36,32 +34,45 @@ export default function App() {
   }, [])
 
   if (splashShown) {
-    return <Splash onDismiss={() => setSplashShown(false)} />
+    return (
+      <>
+        <div className="app-glow" aria-hidden="true" />
+        <Splash onDismiss={() => setSplashShown(false)} />
+      </>
+    )
   }
 
   let screen
   switch (route.name) {
-    case 'discover': screen = <Discover navigate={navigate} />; break
-    case 'campaign': screen = (
-      <Campaign
-        id={route.id}
-        navigate={navigate}
-        joined={joinedPrayerGroups.has(route.id)}
-        onTogglePrayer={() => togglePrayerGroup(route.id)}
-      />
-    ); break
-    case 'give':     screen = <Give id={route.id} navigate={navigate} recordGift={recordGift} />; break
-    case 'history':  screen = <History gifts={gifts} navigate={navigate} />; break
-    case 'about':    screen = <About />; break
+    case 'list':
+      screen = <List view={route.view || 'weekly'} navigate={navigate} />
+      break
+    case 'deck':
+    case 'discover':
+      screen = <Discover navigate={navigate} />
+      break
+    case 'campaign':
+      screen = (
+        <Campaign
+          id={route.id}
+          from={route.from}
+          view={route.view}
+          navigate={navigate}
+          joined={joinedPrayerGroups.has(route.id)}
+          onTogglePrayer={() => togglePrayerGroup(route.id)}
+        />
+      )
+      break
     case 'home':
-    default:         screen = <Home navigate={navigate} />; break
+    default:
+      screen = <Home navigate={navigate} />
+      break
   }
 
   return (
     <>
-      <Header route={route} navigate={navigate} givingCount={gifts.length} />
+      <div className="app-glow" aria-hidden="true" />
       {screen}
-      <Footer />
     </>
   )
 }
