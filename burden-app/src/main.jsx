@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
+import './styles.css'
 import App from './App.jsx'
 
 const dsn = import.meta.env.VITE_SENTRY_DSN

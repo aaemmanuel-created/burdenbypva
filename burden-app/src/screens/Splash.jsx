@@ -1,87 +1,60 @@
-import { useEffect, useState } from 'react'
-import { colors } from '../theme.js'
+import { useEffect, useRef, useState } from 'react'
+import { vibrate } from '../data/burdens.js'
 
-// Splash — the moment the app opens. Reverent thank-you, Helvetica
-// (everything else in the app is JetBrains Mono — this is the one place
-// the typography breaks for intentional warmth). Subtle haptic on mount
-// where the platform allows it (Android Chrome; iOS Safari silently
-// no-ops, which is fine — we don't fail).
-//
-// Dismisses on tap, on key press, or automatically after 3.5 seconds.
-//
-// Visually inspired by Rewind's open-screen — full-bleed, centred, almost
-// nothing on it. A breath before the rest of the app.
+// Splash screen — Helvetica thank-you that fades in from blur, with a
+// rewind-style intensifying haptic. Tap or press to dismiss.
 
-const HELVETICA = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+function runIntroHaptics() {
+  // Pulses get longer, gaps shrink, big finale.
+  vibrate([
+    18, 360,
+    24, 310,
+    32, 260,
+    44, 215,
+    60, 175,
+    82, 140,
+    110, 110,
+    150, 85,
+    200, 60,
+    280,
+  ])
+}
 
 export default function Splash({ onDismiss }) {
-  const [leaving, setLeaving] = useState(false)
+  const [shown, setShown] = useState(false)
+  const dismissedRef = useRef(false)
 
   useEffect(() => {
-    // Gentle pulse — like a doorbell, not an alarm.
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate([12, 80, 18]) } catch { /* no-op */ }
-    }
-    // Auto-dismiss
-    const t = setTimeout(() => dismiss(), 3500)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const t = requestAnimationFrame(() => {
+      setTimeout(() => {
+        setShown(true)
+        runIntroHaptics()
+      }, 250)
+    })
+    return () => cancelAnimationFrame(t)
   }, [])
 
-  function dismiss() {
-    if (leaving) return
-    setLeaving(true)
-    setTimeout(onDismiss, 320) // match the fade duration below
+  function handleDismiss() {
+    if (!shown || dismissedRef.current) return
+    dismissedRef.current = true
+    vibrate(22)
+    onDismiss()
   }
 
   return (
-    <div
-      onClick={dismiss}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') dismiss() }}
+    <section
+      className="screen intro"
+      onClick={handleDismiss}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleDismiss()
+      }}
       role="button"
       tabIndex={0}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: colors.bg,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 100,
-        cursor: 'pointer',
-        opacity: leaving ? 0 : 1,
-        transition: 'opacity 320ms ease-out',
-        padding: '32px',
-      }}
     >
-      <div style={{
-        fontFamily: HELVETICA,
-        fontWeight: 300,
-        fontSize: 'clamp(28px, 7vw, 64px)',
-        lineHeight: 1.15,
-        letterSpacing: -0.5,
-        color: colors.ink,
-        textAlign: 'center',
-        maxWidth: 920,
-      }}>
-        Thank you for supporting a&nbsp;burden today.
-      </div>
-
-      <div style={{
-        position: 'absolute',
-        bottom: 32,
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        fontFamily: HELVETICA,
-        fontSize: 11,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        color: colors.inkMuted,
-      }}>
-        Tap to continue
-      </div>
-    </div>
+      <h1 className={'intro-text' + (shown ? ' in' : '')}>
+        Thank you for supporting a burden today
+      </h1>
+      <span className="intro-hint">Tap to continue</span>
+    </section>
   )
 }
