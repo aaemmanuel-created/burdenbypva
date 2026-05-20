@@ -52,7 +52,7 @@ export default function Splash({ onDismiss }) {
       tabIndex={0}
     >
       <h1 className={'intro-text' + (shown ? ' in' : '')}>
-        Thank you for supporting a burden today
+        Thank you for supporting a burden today.
       </h1>
       <span className="intro-hint">Tap to continue</span>
     </section>
