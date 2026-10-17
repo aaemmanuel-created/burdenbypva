@@ -1,4 +1,4 @@
-import { colors, tile } from '../theme.js'
+import { colors, tile, font, type } from '../theme.js'
 import { Button, Label, Rule, Progress, Badge, Tile, FundingBanner, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches } from '../data/mock.js'
 
@@ -38,7 +38,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
         onClick={() => navigate({ name: 'discover' })}
         style={{
           background: 'transparent', border: 'none', padding: 0,
-          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+          fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
           color: colors.inkSoft, marginBottom: 32,
         }}
       >← Discover</button>
@@ -53,10 +53,11 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
         <div>
           <Label>{burden.category} · Burden</Label>
           <h1 style={{
-            fontSize: 'clamp(28px, 4.5vw, 36px)',
-            fontWeight: 300,
-            lineHeight: 1.15,
-            letterSpacing: -0.5,
+            fontFamily: font.serif,
+            fontSize: 'clamp(28px, 4.5vw, 40px)',
+            fontWeight: 600,
+            lineHeight: 1.2,
+            letterSpacing: '-1.5%',
             marginTop: 14,
             marginBottom: 18,
           }}>{burden.title}</h1>
@@ -108,10 +109,10 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
                   borderBottom: '1px solid ' + colors.ruleSoft,
                 }}>
                   <span style={{
-                    fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+                    fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
                     color: colors.inkMuted,
                   }}>{member.role}</span>
-                  <span style={{ fontSize: 13, color: colors.ink }}>{member.name}</span>
+                  <span style={{ fontSize: 14, color: colors.ink }}>{member.name}</span>
                 </div>
               ))}
             </div>
@@ -138,9 +139,9 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
                   alignItems: 'baseline',
                 }}>
                   <span style={{
-                    fontSize: 11, letterSpacing: 1, color: colors.inkMuted,
+                    fontSize: 12, letterSpacing: 1, color: colors.inkMuted,
                   }}>{String(i + 1).padStart(2, '0')}</span>
-                  <span style={{ fontSize: 13, lineHeight: 1.65, color: colors.ink }}>{step}</span>
+                  <span style={{ fontSize: 14, lineHeight: 1.65, color: colors.ink }}>{step}</span>
                 </li>
               ))}
             </ol>
@@ -167,7 +168,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
                   padding: '12px 0',
                   borderBottom: '1px solid ' + colors.ruleSoft,
                 }}>
-                  <span style={{ fontSize: 13, color: colors.ink }}>{it.label}</span>
+                  <span style={{ fontSize: 14, color: colors.ink }}>{it.label}</span>
                   <span style={{
                     fontSize: 12,
                     color: colors.inkSoft,
@@ -177,7 +178,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
                 </div>
               ))}
             </div>
-            <p style={{ marginTop: 18, fontSize: 11, color: colors.inkMuted, lineHeight: 1.6 }}>
+            <p style={{ marginTop: 18, fontSize: 12, color: colors.inkMuted, lineHeight: 1.6 }}>
               Donors may also cover BURDEN's platform fee at checkout, in which case 100% of
               the gift reaches the church net of payment processing.
             </p>
@@ -207,16 +208,16 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
               alignItems: 'baseline',
             }}>
               <div>
-                <div style={{ fontSize: 24, fontWeight: 500, color: tile.ink }}>
+                <div style={{ fontSize: 28, fontWeight: 500, color: tile.ink }}>
                   {formatMoney(burden.raised)}
                 </div>
-                <div style={{ fontSize: 10, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
                   of {formatMoney(burden.goal)} ({pct}%)
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 16, fontWeight: 500, color: tile.ink }}>{burden.donors}</div>
-                <div style={{ fontSize: 10, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
                   donors
                 </div>
               </div>
@@ -230,7 +231,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
                 background: '#fff',
                 color: colors.navyDeep,
                 border: 'none',
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: 2,
                 textTransform: 'uppercase',
                 fontWeight: 600,
@@ -240,7 +241,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
               }}
             >Carry this burden — give</button>
 
-            <p style={{ marginTop: 4, fontSize: 10, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
+            <p style={{ marginTop: 4, fontSize: 12, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
               Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
               Anonymous and recurring options available at checkout.
             </p>
@@ -257,7 +258,7 @@ function PrayerGroup({ burden, joined, onToggle }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <Label>Prayer group</Label>
-        <span style={{ fontSize: 10, letterSpacing: 1, color: colors.inkMuted }}>
+        <span style={{ fontSize: 12, letterSpacing: 1, color: colors.inkMuted }}>
           {memberCount.toLocaleString()} praying · {burden.prayerGroup.recentPrayers} prayers this week
         </span>
       </div>

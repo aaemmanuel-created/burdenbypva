@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react'
-import { colors } from '../theme.js'
+import { colors, font, type } from '../theme.js'
 
-// Splash — the moment the app opens. Reverent thank-you, Helvetica
-// (everything else in the app is JetBrains Mono — this is the one place
-// the typography breaks for intentional warmth). Subtle haptic on mount
-// where the platform allows it (Android Chrome; iOS Safari silently
-// no-ops, which is fine — we don't fail).
+// Splash — the moment the app opens. Reverent thank-you in the display
+// serif (§2 — Source Serif 4 carries all display moments). Subtle haptic
+// on mount where the platform allows it (Android Chrome; iOS Safari
+// silently no-ops, which is fine — we don't fail).
 //
 // Dismisses on tap, on key press, or automatically after 3.5 seconds.
 //
 // Visually inspired by Rewind's open-screen — full-bleed, centred, almost
 // nothing on it. A breath before the rest of the app.
-
-const HELVETICA = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
 export default function Splash({ onDismiss }) {
   const [leaving, setLeaving] = useState(false)
@@ -56,11 +53,11 @@ export default function Splash({ onDismiss }) {
       }}
     >
       <div style={{
-        fontFamily: HELVETICA,
-        fontWeight: 300,
-        fontSize: 'clamp(28px, 7vw, 64px)',
-        lineHeight: 1.15,
-        letterSpacing: -0.5,
+        fontFamily: font.serif,
+        fontWeight: 400,
+        fontSize: `clamp(${type['2xl'].fontSize}px, 7vw, 64px)`,
+        lineHeight: type['3xl'].lineHeight,
+        letterSpacing: '-1.5%',
         color: colors.ink,
         textAlign: 'center',
         maxWidth: 920,
@@ -74,9 +71,9 @@ export default function Splash({ onDismiss }) {
         left: 0,
         right: 0,
         textAlign: 'center',
-        fontFamily: HELVETICA,
-        fontSize: 11,
-        letterSpacing: 2,
+        fontFamily: font.sans,
+        fontSize: type.xs.fontSize,
+        letterSpacing: '6%',
         textTransform: 'uppercase',
         color: colors.inkMuted,
       }}>

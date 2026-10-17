@@ -1,11 +1,15 @@
 import { useState } from 'react'
-import { colors, tile, radius } from '../theme.js'
+import { colors, tile, radius, font, type } from '../theme.js'
 
+// Small uppercase label — §2: text-xs (12px), +6% tracking, weight 500,
+// serif is reserved for display; labels stay Inter.
 export function Label({ children, style, onNavy }) {
   return (
     <div style={{
-      fontSize: 10,
-      letterSpacing: 2,
+      fontFamily: font.sans,
+      fontSize: type.xs.fontSize,
+      lineHeight: type.xs.lineHeight,
+      letterSpacing: '6%',
       textTransform: 'uppercase',
       color: onNavy ? tile.muted : colors.inkMuted,
       fontWeight: 500,
@@ -25,12 +29,14 @@ export function Rule({ soft = false, style }) {
   )
 }
 
-export function Button({ children, onClick, variant = 'primary', disabled, style, type = 'button', full }) {
+export function Button({ children, onClick, variant = 'primary', disabled, style, type: htmlType = 'button', full }) {
   const base = {
+    fontFamily: font.sans,
     border: '1px solid ' + colors.rule,
-    padding: '14px 22px',
-    fontSize: 11,
-    letterSpacing: 2,
+    padding: '16px 24px',
+    fontSize: type.xs.fontSize,
+    lineHeight: type.xs.lineHeight,
+    letterSpacing: '6%',
     textTransform: 'uppercase',
     fontWeight: 500,
     transition: 'background 120ms ease, color 120ms ease',
@@ -43,7 +49,7 @@ export function Button({ children, onClick, variant = 'primary', disabled, style
     ...style,
   }
   return (
-    <button type={type} onClick={onClick} style={base}>{children}</button>
+    <button type={htmlType} onClick={onClick} style={base}>{children}</button>
   )
 }
 
@@ -84,8 +90,10 @@ export function Badge({ children, tone = 'default', onNavy }) {
   return (
     <span style={{
       display: 'inline-block',
-      fontSize: 9,
-      letterSpacing: 2,
+      fontFamily: font.sans,
+      fontSize: type.xs.fontSize,
+      lineHeight: type.xs.lineHeight,
+      letterSpacing: '6%',
       textTransform: 'uppercase',
       padding: '4px 8px',
       border: '1px solid ' + palette.border,
@@ -188,11 +196,12 @@ export function FundingBanner({ raised, goal, style }) {
       display: 'inline-flex',
       alignItems: 'center',
       gap: 8,
-      padding: '6px 12px 6px 10px',
+      padding: '8px 16px',
       background: `linear-gradient(180deg, ${tier.color} 0%, ${shade(tier.color, -0.18)} 100%)`,
       color: '#fff',
-      fontSize: 9,
-      letterSpacing: 2,
+      fontFamily: font.sans,
+      fontSize: type.xs.fontSize,
+      letterSpacing: '6%',
       textTransform: 'uppercase',
       fontWeight: 600,
       boxShadow: '0 4px 10px -4px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.18) inset',

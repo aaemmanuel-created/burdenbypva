@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { colors, tile } from '../theme.js'
+import { colors, tile, font, type } from '../theme.js'
 import { Label, Rule, Tile, Badge, Progress, FundingBanner, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches } from '../data/mock.js'
 
@@ -72,7 +72,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
   return (
     <main style={{ maxWidth: 1020, margin: '0 auto', padding: '64px 28px 96px' }}>
       <Label>Profile</Label>
-      <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: -0.5, marginTop: 14, marginBottom: 36 }}>
+      <h1 style={{ fontFamily: font.serif, fontSize: type['3xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%', marginTop: 14, marginBottom: 36 }}>
         Your account on BURDEN.
       </h1>
 
@@ -111,7 +111,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                   background: '#fff',
                   color: colors.navyDeep,
                   border: 'none',
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: 2,
                   textTransform: 'uppercase',
                   fontWeight: 600,
@@ -119,7 +119,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                   cursor: 'pointer',
                 }}
               >Save name</button>
-              {savedName && <span style={{ fontSize: 11, color: '#7ec48a', letterSpacing: 1 }}>Saved.</span>}
+              {savedName && <span style={{ fontSize: 12, color: '#7ec48a', letterSpacing: 1 }}>Saved.</span>}
             </div>
           </form>
           <p style={{ fontSize: 12, color: tile.muted, lineHeight: 1.6, margin: 0 }}>
@@ -134,7 +134,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
             <Label onNavy>Account credit</Label>
             <Badge tone="trust" onNavy>Held in escrow</Badge>
           </div>
-          <div style={{ fontSize: 34, fontWeight: 500, color: tile.ink, lineHeight: 1 }}>
+          <div style={{ fontSize: 28, fontWeight: 500, color: tile.ink, lineHeight: 1 }}>
             {formatMoney(credit)}
           </div>
           <p style={{ fontSize: 12, lineHeight: 1.6, color: tile.soft, margin: 0 }}>
@@ -162,7 +162,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                       background: active ? '#fff' : 'rgba(255,255,255,0.06)',
                       color: active ? colors.navyDeep : tile.ink,
                       border: '1px solid ' + (active ? '#fff' : 'rgba(255,255,255,0.18)'),
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: 600,
                       fontFamily: 'inherit',
                       borderRadius: 4,
@@ -185,7 +185,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                 background: 'rgba(255,255,255,0.08)',
                 border: '1px solid rgba(255,255,255,0.18)',
                 color: tile.ink,
-                fontSize: 13,
+                fontSize: 14,
                 outline: 'none',
                 marginBottom: 10,
                 fontFamily: 'inherit',
@@ -202,7 +202,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                 background: canAdd ? '#fff' : 'rgba(255,255,255,0.20)',
                 color: canAdd ? colors.navyDeep : 'rgba(255,255,255,0.55)',
                 border: 'none',
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: 2,
                 textTransform: 'uppercase',
                 fontWeight: 600,
@@ -210,7 +210,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                 cursor: canAdd ? 'pointer' : 'not-allowed',
               }}
             >Add {formatMoney(value)} credit</button>
-            <p style={{ marginTop: 10, fontSize: 10, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
+            <p style={{ marginTop: 10, fontSize: 12, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
               Demo top-up — no payment is processed.
             </p>
           </form>
@@ -231,7 +231,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
       {/* Where your giving has gone */}
       <Label>Where your giving has gone</Label>
       <h2 style={{
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 400,
         letterSpacing: -0.3,
         margin: '12px 0 24px',
@@ -243,7 +243,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
 
       {allocation.length === 0 ? (
         <Tile flat as="div" padding={36} style={{ alignItems: 'flex-start', gap: 16 }}>
-          <p style={{ fontSize: 13, color: tile.soft, margin: 0, maxWidth: 540 }}>
+          <p style={{ fontSize: 14, color: tile.soft, margin: 0, maxWidth: 540 }}>
             When you give to a burden, your gift shows here with the church it
             went to and how it stacks up against the goal. Every gift is
             tracked end to end.
@@ -255,7 +255,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
               background: '#fff',
               color: colors.navyDeep,
               border: 'none',
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: 2,
               textTransform: 'uppercase',
               fontWeight: 600,
@@ -279,7 +279,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                   style={{
                     padding: '8px 14px',
                     border: '1px solid ' + colors.rule,
-                    fontSize: 11,
+                    fontSize: 12,
                     letterSpacing: 1,
                     color: colors.ink,
                     background: colors.bgAlt,
@@ -313,15 +313,15 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                       {formatMoney(total)}
                     </div>
                   </div>
-                  <div style={{ fontSize: 10, color: tile.muted, letterSpacing: 1 }}>
+                  <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1 }}>
                     across {count} {count === 1 ? 'gift' : 'gifts'}
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.3, color: tile.ink }}>
+                    <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: tile.ink }}>
                       {campaign.title}
                     </div>
-                    <div style={{ fontSize: 11, color: tile.muted, letterSpacing: 1, marginTop: 6 }}>
+                    <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1, marginTop: 6 }}>
                       {church.name} — {church.location}
                     </div>
                   </div>
@@ -330,7 +330,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                     <Progress value={campaign.raised} goal={campaign.goal} onNavy />
                     <div style={{
                       display: 'flex', justifyContent: 'space-between',
-                      marginTop: 10, fontSize: 10, letterSpacing: 1, color: tile.soft,
+                      marginTop: 10, fontSize: 12, letterSpacing: 1, color: tile.soft,
                     }}>
                       <span>{pct}% — {campaign.donors} donors</span>
                       <span>{campaign.daysLeft}d left</span>
@@ -378,7 +378,7 @@ function ImpactSummary({ lifetime, giftCount, burdens, countries, navigate }) {
         margin: 0,
         lineHeight: 1.25,
       }}>{headline}</h3>
-      <p style={{ fontSize: 13, lineHeight: 1.65, color: colors.inkSoft, margin: 0, maxWidth: 640 }}>
+      <p style={{ fontSize: 14, lineHeight: 1.65, color: colors.inkSoft, margin: 0, maxWidth: 640 }}>
         {sub}
       </p>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
@@ -389,7 +389,7 @@ function ImpactSummary({ lifetime, giftCount, burdens, countries, navigate }) {
             background: colors.ink,
             color: colors.accentInk,
             border: '1px solid ' + colors.rule,
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: 2,
             textTransform: 'uppercase',
             fontWeight: 500,
@@ -404,7 +404,7 @@ function ImpactSummary({ lifetime, giftCount, burdens, countries, navigate }) {
             background: 'transparent',
             color: colors.ink,
             border: '1px solid ' + colors.rule,
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: 2,
             textTransform: 'uppercase',
             fontWeight: 500,

@@ -1,5 +1,8 @@
-import { colors } from '../theme.js'
+import { colors, font, type } from '../theme.js'
 import { formatMoney } from './UI.jsx'
+
+// Header — §4: no border-bottom; separation from content is whitespace.
+// Wordmark is the display serif (§2); only weights 400/500/600 anywhere.
 
 export default function Header({ route, navigate, givingCount, creditBalance = 0 }) {
   const items = [
@@ -10,7 +13,6 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
   ]
   return (
     <header style={{
-      borderBottom: '1px solid ' + colors.rule,
       background: colors.bg,
       position: 'sticky',
       top: 0,
@@ -19,7 +21,7 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
       <div style={{
         maxWidth: 1080,
         margin: '0 auto',
-        padding: '20px 28px',
+        padding: '24px 32px',
         display: 'flex',
         alignItems: 'baseline',
         justifyContent: 'space-between',
@@ -34,25 +36,28 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
             padding: 0,
             display: 'flex',
             alignItems: 'baseline',
-            gap: 10,
+            gap: 8,
             cursor: 'pointer',
           }}
         >
           <span style={{
-            fontSize: 14,
+            fontFamily: font.serif,
+            fontSize: type.base.fontSize,
             letterSpacing: 6,
-            fontWeight: 700,
+            fontWeight: 600,
             color: colors.ink,
           }}>BURDEN</span>
           <span style={{
-            fontSize: 9,
-            letterSpacing: 3,
+            fontFamily: font.sans,
+            fontSize: type.xs.fontSize,
+            letterSpacing: '6%',
             color: colors.inkMuted,
             fontWeight: 400,
-          }}>BY PVA</span>
+            textTransform: 'uppercase',
+          }}>by HOUSEPVA</span>
         </button>
 
-        <nav style={{ display: 'flex', gap: 28, alignItems: 'baseline', flexWrap: 'wrap' }}>
+        <nav style={{ display: 'flex', gap: 24, alignItems: 'baseline', flexWrap: 'wrap' }}>
           {items.map(it => {
             const active = route.name === it.id
             return (
@@ -63,20 +68,20 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
                   background: 'transparent',
                   border: 'none',
                   padding: '4px 0',
-                  fontSize: 10,
-                  letterSpacing: 2,
+                  fontFamily: font.sans,
+                  fontSize: type.xs.fontSize,
+                  letterSpacing: '6%',
                   textTransform: 'uppercase',
                   color: active ? colors.ink : colors.inkSoft,
                   fontWeight: active ? 600 : 400,
-                  borderBottom: active ? '1px solid ' + colors.ink : '1px solid transparent',
                   cursor: 'pointer',
                 }}
               >
                 {it.label}
                 {it.id === 'history' && givingCount > 0 && (
                   <span style={{
-                    marginLeft: 6,
-                    fontSize: 9,
+                    marginLeft: 8,
+                    fontSize: type.xs.fontSize,
                     color: colors.inkMuted,
                   }}>({givingCount})</span>
                 )}
@@ -91,9 +96,10 @@ export default function Header({ route, navigate, givingCount, creditBalance = 0
                 color: colors.accentInk,
                 border: 'none',
                 borderRadius: 999,
-                padding: '6px 12px',
-                fontSize: 10,
-                letterSpacing: 1.5,
+                padding: '8px 16px',
+                fontFamily: font.sans,
+                fontSize: type.xs.fontSize,
+                letterSpacing: '6%',
                 textTransform: 'uppercase',
                 fontWeight: 600,
                 cursor: 'pointer',

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { colors, tile } from '../theme.js'
+import { colors, tile, font, type } from '../theme.js'
 import { Label, Rule, Progress, Badge, Tile, FundingBanner, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches } from '../data/mock.js'
 
@@ -102,7 +102,7 @@ export default function Discover({ navigate }) {
   return (
     <main style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 28px 0' }}>
       <Label>Discover</Label>
-      <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: -0.5, marginTop: 14, marginBottom: 36 }}>
+      <h1 style={{ fontFamily: font.serif, fontSize: type['3xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%', marginTop: 14, marginBottom: 36 }}>
         Verified churches and burdens.
       </h1>
 
@@ -122,7 +122,7 @@ export default function Discover({ navigate }) {
               background: cat === c ? colors.ink : 'transparent',
               color: cat === c ? colors.accentInk : colors.ink,
               border: '1px solid ' + colors.rule,
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: 2,
               textTransform: 'uppercase',
               fontWeight: 500,
@@ -179,7 +179,7 @@ export default function Discover({ navigate }) {
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 24,
-        fontSize: 11,
+        fontSize: 12,
         letterSpacing: 1,
         color: colors.inkMuted,
       }}>
@@ -190,7 +190,7 @@ export default function Discover({ navigate }) {
             style={{
               background: 'transparent',
               border: 'none',
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: 2,
               textTransform: 'uppercase',
               color: colors.inkSoft,
@@ -230,10 +230,10 @@ export default function Discover({ navigate }) {
               </div>
 
               <div>
-                <div style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3, marginBottom: 8, color: tile.ink }}>
+                <div style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.3, marginBottom: 8, color: tile.ink }}>
                   {c.title}
                 </div>
-                <div style={{ fontSize: 11, color: tile.muted, letterSpacing: 1 }}>
+                <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1 }}>
                   {church.name} — {church.location}
                 </div>
               </div>
@@ -248,7 +248,7 @@ export default function Discover({ navigate }) {
                   display: 'flex',
                   justifyContent: 'space-between',
                   marginTop: 10,
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: 1,
                   color: tile.soft,
                 }}>
@@ -289,7 +289,7 @@ function FilterSelect({ label, value, options, onChange }) {
       <span style={{
         position: 'absolute', top: -8, left: 10,
         background: colors.bg, padding: '0 6px',
-        fontSize: 9, letterSpacing: 2, textTransform: 'uppercase',
+        fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
         color: colors.inkMuted,
       }}>{label}</span>
       <select

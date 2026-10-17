@@ -1,5 +1,11 @@
-// BURDEN by PVA — design tokens
+// BURDEN by HOUSEPVA — design tokens
 // Reverent, trustworthy, warm, plain. No religious iconography by default.
+//
+// 2026-07-02 overhaul pass (BURDEN_app_design_overhaul_prompt.md) applied
+// WITHOUT the §1 color pivot — palette remains warm paper + glassy navy.
+// Adopted: §2 typography (Source Serif 4 + Inter, 3 weights, fixed scale),
+// §3 strict 8px spacing, §4 whitespace-not-lines, §5 motion, §6 daily
+// reading, §7 haptics.
 
 export const colors = {
   bg: '#f7f6f2',          // warm paper
@@ -7,8 +13,8 @@ export const colors = {
   ink: '#0a0a0a',         // primary text
   inkSoft: '#4a4a4a',     // secondary text
   inkMuted: '#8a8a85',    // tertiary / labels
-  rule: '#1a1a1a',        // hairlines & strong borders
-  ruleSoft: '#d8d6cf',    // soft dividers
+  rule: '#1a1a1a',        // hairlines & strong borders (inputs + hero card ONLY per §4)
+  ruleSoft: '#d8d6cf',    // soft dividers (inputs only per §4)
   accent: '#1a1a1a',      // primary action (mono, restrained)
   accentInk: '#f7f6f2',   // text on accent
   trust: '#2c5e3f',       // verified badge — quiet evergreen (paper bg)
@@ -60,11 +66,31 @@ export const tile = {
   rule:   colors.navyRule,
 }
 
+// Two fonts, three weights (400/500/600) — nothing else (§2).
+// Serif: wordmark, hero headline, section labels, project titles.
+// Sans: everything else.
 export const font = {
-  mono: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+  serif: "'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman', serif",
+  sans: "'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  // Legacy key — a few files import `font.mono`; it now resolves to the
+  // sans stack (JetBrains Mono retired per §2).
+  mono: "'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 }
 
-export const space = (n) => `${n * 4}px`
+// Type scale (px) — §2, do not deviate.
+export const type = {
+  xs:    { fontSize: 12, lineHeight: 1.45 },
+  sm:    { fontSize: 14, lineHeight: 1.45 },
+  base:  { fontSize: 16, lineHeight: 1.5 },
+  lg:    { fontSize: 18, lineHeight: 1.5 },
+  xl:    { fontSize: 22, lineHeight: 1.35 },
+  '2xl': { fontSize: 28, lineHeight: 1.25 },
+  '3xl': { fontSize: 40, lineHeight: 1.2 },
+}
+
+// Strict 8px spacing scale (§3): 8, 16, 24, 32, 48, 64, 96, 128.
+// space(1)=8 … 4px exists solely for inline icon nudges.
+export const space = (n) => `${n * 8}px`
 
 export const radius = {
   none: '0px',

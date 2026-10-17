@@ -1,18 +1,23 @@
-import { colors, tile } from '../theme.js'
-import { Label, Rule, Progress, Badge, Tile, FundingBanner, formatMoney } from '../components/UI.jsx'
+import { colors, tile, font, type } from '../theme.js'
+import { Label, Progress, Badge, Tile, FundingBanner, formatMoney } from '../components/UI.jsx'
+import DailyReading from '../components/DailyReading.jsx'
+import { useParallax, FadeIn } from '../lib/motion.jsx'
 import { campaigns, churches, events } from '../data/mock.js'
 
-// The home screen is a curated feed in four sections:
+// The home screen is a curated feed in five sections:
 //   1. Welcome paragraph   — sentence-like introduction (anchored centre-left)
 //   2. Burden of the week  — one prominently featured burden, the week's pick
 //   3. Burdens             — every verified burden currently raising
 //   4. Churches            — verified congregations and institutions
 //   5. Events              — upcoming services, outreach, town halls
-// Sections are separated by hairline rules. Tiles are glassy navy with a
-// raised 3D presentation and a funding-tier banner that shows transparently
-// where each burden stands. "Burdens" are the user-facing name for what the
-// data model calls "campaigns" (specific, time-bound, crowdfunded projects
-// owned by a verified church — never general tithing).
+// …closed by <DailyReading /> — the day's passage, whitespace only.
+//
+// Overhaul pass (§3–§6): sections are separated by WHITESPACE, not rules —
+// 128px after the burden of the week, 96px between grids; section label to
+// content is 48px; card gap 24px. The hero card drifts on scroll (0.85×,
+// capped 80px); grid cards fade in staggered. "Burdens" are the user-facing
+// name for what the data model calls "campaigns" (specific, time-bound,
+// crowdfunded projects owned by a verified church — never general tithing).
 
 export default function Home({ navigate, profile }) {
   // Weekly highlight — picked editorially. For the demo it's the Lagos
@@ -21,10 +26,8 @@ export default function Home({ navigate, profile }) {
   const highlightChurch = churches.find(c => c.id === highlight.churchId)
 
   return (
-    <main style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px' }}>
+    <main style={{ maxWidth: 1080, margin: '0 auto', padding: '0 32px' }}>
       <Welcome navigate={navigate} profile={profile} />
-
-      <Rule />
 
       <SectionTitle
         label="Burden of the week"
@@ -32,49 +35,52 @@ export default function Home({ navigate, profile }) {
       />
       <HighlightCard campaign={highlight} church={highlightChurch} navigate={navigate} />
 
-      <Rule />
+      {/* §3: 128px between the burden of the week and the next section */}
+      <div style={{ height: 128 }} aria-hidden />
 
-      <SectionTitle label="Burdens" cta="See all" onCta={() => navigate({ name: 'discover' })} />
+      <SectionTitle label="Burdens" cta="See all" onCta={() => navigate({ name: 'discover' })} spacer={0} />
       <CampaignGrid items={campaigns} navigate={navigate} />
 
       <Invitation navigate={navigate} profile={profile} />
 
-      <Rule />
+      <div style={{ height: 96 }} aria-hidden />
 
-      <SectionTitle label="Churches" cta="See all" onCta={() => navigate({ name: 'discover' })} />
+      <SectionTitle label="Churches" cta="See all" onCta={() => navigate({ name: 'discover' })} spacer={0} />
       <ChurchGrid items={churches} navigate={navigate} />
 
-      <Rule />
+      <div style={{ height: 96 }} aria-hidden />
 
-      <SectionTitle label="Events" />
+      <SectionTitle label="Events" spacer={0} />
       <EventList items={events} />
+
+      <DailyReading />
     </main>
   )
 }
 
 // ─── Welcome — sentence-like intro, anchored centre-left ─────────────────────
 //
-// Reads like a short paragraph rather than a stack of labels. The text
-// column sits in the centred page wrapper, but every line is left-aligned
-// so the eye can read it naturally.
+// §3: 96px top, 64px bottom on the hero section. The lead paragraph is the
+// display serif at the hero step of the scale.
 
 function Welcome({ navigate, profile }) {
   const firstName = profile?.name ? profile.name.split(' ')[0] : null
   return (
     <section style={{
-      padding: '72px 0 56px',
+      padding: '96px 0 64px',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-start',
       textAlign: 'left',
-      gap: 18,
+      gap: 16,
     }}>
-      <Label>BURDEN by PVA</Label>
+      <Label>BURDEN by HOUSEPVA</Label>
       <p style={{
-        fontSize: 'clamp(20px, 2.6vw, 28px)',
-        lineHeight: 1.45,
+        fontFamily: font.serif,
+        fontSize: `clamp(${type.xl.fontSize}px, 3vw, ${type['2xl'].fontSize}px)`,
+        lineHeight: type['2xl'].lineHeight,
         fontWeight: 400,
-        letterSpacing: -0.2,
+        letterSpacing: '-1.5%',
         color: colors.ink,
         maxWidth: 720,
         margin: 0,
@@ -86,7 +92,7 @@ function Welcome({ navigate, profile }) {
         to end, every church is verified, and you can always see exactly where
         your money has gone.
       </p>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 6 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         <CtaPill onClick={() => navigate({ name: 'discover' })} primary>
           Browse burdens
         </CtaPill>
@@ -105,12 +111,13 @@ function CtaPill({ children, onClick, primary }) {
     <button
       onClick={onClick}
       style={{
-        padding: '12px 20px',
+        padding: '16px 24px',
         background: primary ? colors.ink : 'transparent',
         color: primary ? colors.accentInk : colors.ink,
         border: '1px solid ' + colors.rule,
-        fontSize: 11,
-        letterSpacing: 2,
+        fontFamily: font.sans,
+        fontSize: type.xs.fontSize,
+        letterSpacing: '6%',
         textTransform: 'uppercase',
         fontWeight: 500,
         cursor: 'pointer',
@@ -121,22 +128,35 @@ function CtaPill({ children, onClick, primary }) {
 }
 
 // ─── Section title with optional CTA ──────────────────────────────────────────
+//
+// §2: section labels move to the display serif at text-2xl alongside the
+// small uppercase kicker. §3: label block sits 48px above its content.
 
-function SectionTitle({ label, sublabel, cta, onCta }) {
+function SectionTitle({ label, sublabel, cta, onCta, spacer = 0 }) {
   return (
-    <div style={{ padding: '64px 0 28px' }}>
+    <div style={{ paddingTop: spacer, paddingBottom: 48 }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'baseline',
+        gap: 24,
       }}>
-        <Label>{label}</Label>
+        <h2 style={{
+          fontFamily: font.serif,
+          fontSize: type['2xl'].fontSize,
+          lineHeight: type['2xl'].lineHeight,
+          letterSpacing: '-1.5%',
+          fontWeight: 600,
+          color: colors.ink,
+          margin: 0,
+        }}>{label}</h2>
         {cta && (
           <button
             onClick={onCta}
             style={{
               background: 'transparent', border: 'none',
-              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+              fontFamily: font.sans,
+              fontSize: type.xs.fontSize, letterSpacing: '6%', textTransform: 'uppercase',
               color: colors.inkSoft, fontWeight: 500, cursor: 'pointer',
             }}
           >{cta} →</button>
@@ -144,9 +164,10 @@ function SectionTitle({ label, sublabel, cta, onCta }) {
       </div>
       {sublabel && (
         <p style={{
-          marginTop: 14,
-          fontSize: 14,
-          lineHeight: 1.6,
+          marginTop: 16,
+          fontFamily: font.sans,
+          fontSize: type.sm.fontSize,
+          lineHeight: type.sm.lineHeight,
           color: colors.inkSoft,
           maxWidth: 640,
         }}>{sublabel}</p>
@@ -156,75 +177,88 @@ function SectionTitle({ label, sublabel, cta, onCta }) {
 }
 
 // ─── Highlight of the week — single large glassy navy card ────────────────────
+//
+// §5(a): the card drifts upward at 0.85× scroll speed, capped at 80px.
+// §4: this is the ONE card allowed a border.
 
 function HighlightCard({ campaign, church, navigate }) {
   const pct = Math.round((campaign.raised / campaign.goal) * 100)
+  const parallaxRef = useParallax()
   return (
-    <Tile
-      onClick={() => navigate({ name: 'campaign', id: campaign.id })}
-      padding={32}
-      style={{ gap: 18 }}
-    >
-      <FundingBanner raised={campaign.raised} goal={campaign.goal} />
+    <div ref={parallaxRef} style={{ willChange: 'transform' }}>
+      <Tile
+        onClick={() => navigate({ name: 'campaign', id: campaign.id })}
+        padding={32}
+        style={{ gap: 16 }}
+      >
+        <FundingBanner raised={campaign.raised} goal={campaign.goal} />
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
-        <Label onNavy>{campaign.category}</Label>
-        {church.verified && <Badge tone="trust" onNavy>{church.tier}</Badge>}
-      </div>
-
-      <h2 style={{
-        fontSize: 'clamp(22px, 4vw, 32px)',
-        fontWeight: 400,
-        lineHeight: 1.15,
-        letterSpacing: -0.5,
-        color: tile.ink,
-        margin: 0,
-      }}>{campaign.title}</h2>
-
-      <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1 }}>
-        {church.name} — {church.location}
-      </div>
-
-      <p style={{ fontSize: 14, lineHeight: 1.7, color: tile.soft, maxWidth: 640, margin: 0 }}>
-        {campaign.summary}
-      </p>
-
-      <div style={{ display: 'flex', gap: 32, alignItems: 'baseline', flexWrap: 'wrap', marginTop: 6 }}>
-        <Stat label="Raised" value={formatMoney(campaign.raised)} />
-        <Stat label="Goal"   value={formatMoney(campaign.goal)} />
-        <Stat label="Donors" value={String(campaign.donors)} />
-      </div>
-
-      <div style={{ marginTop: 8 }}>
-        <Progress value={campaign.raised} goal={campaign.goal} onNavy />
-        <div style={{
-          marginTop: 10,
-          fontSize: 11,
-          letterSpacing: 1,
-          color: tile.soft,
-          display: 'flex',
-          justifyContent: 'space-between',
-        }}>
-          <span>{pct}% funded</span>
-          <span>{campaign.daysLeft} days left</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+          <Label onNavy>{campaign.category}</Label>
+          {church.verified && <Badge tone="trust" onNavy>{church.tier}</Badge>}
         </div>
-      </div>
 
-      <div style={{
-        marginTop: 8,
-        alignSelf: 'flex-start',
-        padding: '12px 22px',
-        border: '1px solid rgba(255,255,255,0.55)',
-        background: '#fff',
-        color: colors.navyDeep,
-        fontSize: 11,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        fontWeight: 600,
-        borderRadius: 999,
-        boxShadow: '0 6px 14px -6px rgba(0,0,0,0.55)',
-      }}>View burden →</div>
-    </Tile>
+        <h2 style={{
+          fontFamily: font.serif,
+          fontSize: `clamp(${type.xl.fontSize}px, 4vw, ${type['3xl'].fontSize}px)`,
+          fontWeight: 600,
+          lineHeight: type['3xl'].lineHeight,
+          letterSpacing: '-1.5%',
+          color: tile.ink,
+          margin: 0,
+        }}>{campaign.title}</h2>
+
+        <div style={{ fontFamily: font.sans, fontSize: type.sm.fontSize, color: tile.muted }}>
+          {church.name} — {church.location}
+        </div>
+
+        <p style={{
+          fontFamily: font.sans,
+          fontSize: type.lg.fontSize,
+          lineHeight: type.lg.lineHeight,
+          color: tile.soft, maxWidth: 640, margin: 0,
+        }}>
+          {campaign.summary}
+        </p>
+
+        <div style={{ display: 'flex', gap: 32, alignItems: 'baseline', flexWrap: 'wrap', marginTop: 8 }}>
+          <Stat label="Raised" value={formatMoney(campaign.raised)} />
+          <Stat label="Goal"   value={formatMoney(campaign.goal)} />
+          <Stat label="Donors" value={String(campaign.donors)} />
+        </div>
+
+        <div style={{ marginTop: 8 }}>
+          <Progress value={campaign.raised} goal={campaign.goal} onNavy />
+          <div style={{
+            marginTop: 8,
+            fontFamily: font.sans,
+            fontSize: type.xs.fontSize,
+            color: tile.soft,
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}>
+            <span>{pct}% funded</span>
+            <span>{campaign.daysLeft} days left</span>
+          </div>
+        </div>
+
+        <div style={{
+          marginTop: 8,
+          alignSelf: 'flex-start',
+          padding: '16px 24px',
+          border: '1px solid rgba(255,255,255,0.55)',
+          background: '#fff',
+          color: colors.navyDeep,
+          fontFamily: font.sans,
+          fontSize: type.xs.fontSize,
+          letterSpacing: '6%',
+          textTransform: 'uppercase',
+          fontWeight: 600,
+          borderRadius: 999,
+          boxShadow: '0 6px 14px -6px rgba(0,0,0,0.55)',
+        }}>View burden →</div>
+      </Tile>
+    </div>
   )
 }
 
@@ -232,60 +266,79 @@ function Stat({ label, value }) {
   return (
     <div>
       <Label onNavy>{label}</Label>
-      <div style={{ fontSize: 20, fontWeight: 500, marginTop: 4, color: tile.ink }}>{value}</div>
+      <div style={{
+        fontFamily: font.sans,
+        fontSize: type.xl.fontSize,
+        fontWeight: 500, marginTop: 4, color: tile.ink,
+      }}>{value}</div>
     </div>
   )
 }
 
 // ─── Burdens grid ─────────────────────────────────────────────────────────────
+//
+// §5(b): cards fade in on first appearance — 400ms ease-out, 60ms stagger.
+// §3: 24px card gap, 32px internal card padding.
 
 function CampaignGrid({ items, navigate }) {
   return (
     <div style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-      gap: 20,
+      gap: 24,
     }}>
-      {items.map(c => {
+      {items.map((c, i) => {
         const church = churches.find(ch => ch.id === c.churchId)
         const pct = Math.round((c.raised / c.goal) * 100)
         return (
-          <Tile
-            key={c.id}
-            onClick={() => navigate({ name: 'campaign', id: c.id })}
-            padding={24}
-            minHeight={300}
-            style={{ gap: 14 }}
-          >
-            <FundingBanner raised={c.raised} goal={c.goal} />
+          <FadeIn key={c.id} index={i}>
+            <Tile
+              onClick={() => navigate({ name: 'campaign', id: c.id })}
+              padding={32}
+              minHeight={300}
+              style={{ gap: 16, flex: 1 }}
+            >
+              <FundingBanner raised={c.raised} goal={c.goal} />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <Label onNavy>{c.category}</Label>
-              {church.verified && <Badge tone="trust" onNavy>Verified</Badge>}
-            </div>
-
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: tile.ink }}>{c.title}</div>
-              <div style={{ fontSize: 11, color: tile.muted, letterSpacing: 1, marginTop: 6 }}>
-                {church.name} — {church.location}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <Label onNavy>{c.category}</Label>
+                {church.verified && <Badge tone="trust" onNavy>Verified</Badge>}
               </div>
-            </div>
 
-            <p style={{ fontSize: 12, lineHeight: 1.6, color: tile.soft, flex: 1, margin: 0 }}>
-              {c.summary}
-            </p>
+              <div>
+                <div style={{
+                  fontFamily: font.serif,
+                  fontSize: type.lg.fontSize,
+                  fontWeight: 600, lineHeight: 1.3, color: tile.ink,
+                }}>{c.title}</div>
+                <div style={{ fontFamily: font.sans, fontSize: type.xs.fontSize, color: tile.muted, marginTop: 8 }}>
+                  {church.name} — {church.location}
+                </div>
+              </div>
 
-            <div>
-              <Progress value={c.raised} goal={c.goal} onNavy />
-              <div style={{
-                display: 'flex', justifyContent: 'space-between',
-                marginTop: 10, fontSize: 10, letterSpacing: 1, color: tile.soft,
+              <p style={{
+                fontFamily: font.sans,
+                fontSize: type.sm.fontSize,
+                lineHeight: type.sm.lineHeight,
+                color: tile.soft, flex: 1, margin: 0,
               }}>
-                <span>{pct}% — {c.donors} donors</span>
-                <span>{c.daysLeft}d left</span>
+                {c.summary}
+              </p>
+
+              <div>
+                <Progress value={c.raised} goal={c.goal} onNavy />
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  marginTop: 8,
+                  fontFamily: font.sans,
+                  fontSize: type.xs.fontSize, color: tile.soft,
+                }}>
+                  <span>{pct}% — {c.donors} donors</span>
+                  <span>{c.daysLeft}d left</span>
+                </div>
               </div>
-            </div>
-          </Tile>
+            </Tile>
+          </FadeIn>
         )
       })}
     </div>
@@ -299,48 +352,60 @@ function ChurchGrid({ items, navigate }) {
     <div style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-      gap: 20,
+      gap: 24,
     }}>
-      {items.map(ch => (
-        <Tile
-          key={ch.id}
-          onClick={() => navigate({ name: 'discover' })}
-          padding={24}
-          minHeight={220}
-          style={{ gap: 14 }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <Label onNavy>{ch.tradition}</Label>
-            {ch.verified && <Badge tone="trust" onNavy>{ch.tier}</Badge>}
-          </div>
-
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: tile.ink }}>{ch.name}</div>
-            <div style={{ fontSize: 11, color: tile.muted, letterSpacing: 1, marginTop: 6 }}>
-              {ch.location} · est. {ch.founded}
+      {items.map((ch, i) => (
+        <FadeIn key={ch.id} index={i}>
+          <Tile
+            onClick={() => navigate({ name: 'discover' })}
+            padding={32}
+            minHeight={220}
+            style={{ gap: 16, flex: 1 }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <Label onNavy>{ch.tradition}</Label>
+              {ch.verified && <Badge tone="trust" onNavy>{ch.tier}</Badge>}
             </div>
-          </div>
 
-          <p style={{ fontSize: 12, lineHeight: 1.6, color: tile.soft, flex: 1, margin: 0 }}>
-            {ch.summary}
-          </p>
+            <div>
+              <div style={{
+                fontFamily: font.serif,
+                fontSize: type.lg.fontSize,
+                fontWeight: 600, lineHeight: 1.3, color: tile.ink,
+              }}>{ch.name}</div>
+              <div style={{ fontFamily: font.sans, fontSize: type.xs.fontSize, color: tile.muted, marginTop: 8 }}>
+                {ch.location} · est. {ch.founded}
+              </div>
+            </div>
 
-          <div style={{ fontSize: 10, letterSpacing: 1, color: tile.muted }}>
-            {ch.members.toLocaleString()} members
-          </div>
-        </Tile>
+            <p style={{
+              fontFamily: font.sans,
+              fontSize: type.sm.fontSize,
+              lineHeight: type.sm.lineHeight,
+              color: tile.soft, flex: 1, margin: 0,
+            }}>
+              {ch.summary}
+            </p>
+
+            <div style={{ fontFamily: font.sans, fontSize: type.xs.fontSize, letterSpacing: '6%', color: tile.muted }}>
+              {ch.members.toLocaleString()} members
+            </div>
+          </Tile>
+        </FadeIn>
       ))}
     </div>
   )
 }
 
 // ─── Events list ──────────────────────────────────────────────────────────────
+//
+// §4: the per-row hairlines are gone — 48px of whitespace separates events.
 
 function EventList({ items }) {
   // Sort ascending — soonest event first.
   const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date))
   return (
-    <div style={{ borderTop: '1px solid ' + colors.rule }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
       {sorted.map(e => {
         const church = e.churchId ? churches.find(ch => ch.id === e.churchId) : null
         const d = new Date(e.date)
@@ -349,23 +414,42 @@ function EventList({ items }) {
         return (
           <div key={e.id} style={{
             display: 'grid',
-            gridTemplateColumns: '88px 1fr auto',
-            gap: 28,
+            gridTemplateColumns: '96px 1fr auto',
+            gap: 32,
             alignItems: 'baseline',
-            padding: '24px 0',
-            borderBottom: '1px solid ' + colors.ruleSoft,
           }}>
             <div>
-              <div style={{ fontSize: 28, fontWeight: 500, lineHeight: 1 }}>{day}</div>
-              <div style={{ fontSize: 10, letterSpacing: 2, color: colors.inkMuted, marginTop: 6 }}>{month}</div>
+              <div style={{
+                fontFamily: font.serif,
+                fontSize: type['2xl'].fontSize,
+                fontWeight: 600, lineHeight: 1,
+              }}>{day}</div>
+              <div style={{
+                fontFamily: font.sans,
+                fontSize: type.xs.fontSize, letterSpacing: '6%',
+                color: colors.inkMuted, marginTop: 8,
+              }}>{month}</div>
             </div>
 
             <div>
-              <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 6 }}>{e.title}</div>
-              <div style={{ fontSize: 11, letterSpacing: 1, color: colors.inkMuted, marginBottom: 8 }}>
+              <div style={{
+                fontFamily: font.sans,
+                fontSize: type.base.fontSize,
+                fontWeight: 500, marginBottom: 8,
+              }}>{e.title}</div>
+              <div style={{
+                fontFamily: font.sans,
+                fontSize: type.xs.fontSize, letterSpacing: '6%',
+                color: colors.inkMuted, marginBottom: 8,
+              }}>
                 {church ? church.name.toUpperCase() : 'BURDEN'} · {e.location.toUpperCase()}
               </div>
-              <p style={{ fontSize: 12, lineHeight: 1.6, color: colors.inkSoft, maxWidth: 640 }}>
+              <p style={{
+                fontFamily: font.sans,
+                fontSize: type.sm.fontSize,
+                lineHeight: type.sm.lineHeight,
+                color: colors.inkSoft, maxWidth: 640,
+              }}>
                 {e.summary}
               </p>
             </div>
@@ -404,24 +488,29 @@ function Invitation({ navigate, profile }) {
         gap: 32,
         alignItems: 'center',
         background: colors.bgAlt,
-        border: '1px solid ' + colors.ruleSoft,
-        padding: 28,
+        padding: 32,
         borderRadius: 8,
       }}>
         <div>
           <Label>An invitation</Label>
           <h3 style={{
-            fontSize: 'clamp(18px, 2.2vw, 22px)',
-            fontWeight: 400,
-            letterSpacing: -0.2,
-            margin: '10px 0 10px',
-            lineHeight: 1.3,
+            fontFamily: font.serif,
+            fontSize: type.xl.fontSize,
+            lineHeight: type.xl.lineHeight,
+            fontWeight: 600,
+            letterSpacing: '-1.5%',
+            margin: '8px 0 8px',
           }}>{heading}</h3>
-          <p style={{ fontSize: 13, lineHeight: 1.65, color: colors.inkSoft, margin: 0, maxWidth: 560 }}>
+          <p style={{
+            fontFamily: font.sans,
+            fontSize: type.sm.fontSize,
+            lineHeight: 1.65,
+            color: colors.inkSoft, margin: 0, maxWidth: 560,
+          }}>
             {body}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <CtaPill onClick={() => navigate({ name: 'discover' })} primary>Browse burdens</CtaPill>
           <CtaPill onClick={() => navigate({ name: 'profile' })}>Your impact</CtaPill>
         </div>
