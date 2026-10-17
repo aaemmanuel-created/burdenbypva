@@ -1,7 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
-import './styles.css'
 import App from './App.jsx'
 
 const dsn = import.meta.env.VITE_SENTRY_DSN
@@ -24,7 +23,7 @@ if (typeof window !== 'undefined' && new URLSearchParams(window.location.search)
 }
 
 const Fallback = () => (
-  <div style={{ padding: '2rem', fontFamily: 'JetBrains Mono, monospace' }}>
+  <div style={{ padding: '32px', fontFamily: "Helvetica, 'Helvetica Neue', Arial, sans-serif" }}>
     <h1>Something went wrong.</h1>
     <p>The page hit an unexpected error. Reload to try again.</p>
   </div>

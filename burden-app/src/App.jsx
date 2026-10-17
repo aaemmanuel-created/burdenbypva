@@ -1,78 +1,151 @@
-import { useCallback, useState } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import Header from './components/Header.jsx'
+import Dock from './components/Dock.jsx'
+import Footer from './components/Footer.jsx'
 import Splash from './screens/Splash.jsx'
 import Home from './screens/Home.jsx'
 import Discover from './screens/Discover.jsx'
-import List from './screens/List.jsx'
 import Campaign from './screens/Campaign.jsx'
+import Give from './screens/Give.jsx'
+import History from './screens/History.jsx'
+import Profile from './screens/Profile.jsx'
+import About from './screens/About.jsx'
+import GiftDetail from './screens/GiftDetail.jsx'
+import { takeCheckoutReturn } from './lib/payments.js'
+import { isGiven, settleDemoGift } from './lib/giftTimeline.js'
 
-// Mobile-first single-screen app. Five surfaces:
-//   intro    splash (Helvetica thank-you, tap to continue)
-//   home     menu (BURDEN by PVA + three entry points)
-//   list     "Burden of the Week" or "Spree" list with extras
-//   deck     "Burdens" horizontal swipe carousel
-//   campaign single-burden detail
-//
-// Routing is state-based so the app stays fully self-contained — no router
-// dependency, no URL state, no server side. Joined prayer groups live in
-// App state and persist to localStorage from the detail screen.
+// Joined prayer groups, recorded gifts, the splash gate, account credit,
+// and donor name all live in App state. Gifts are also kept in this
+// browser's localStorage so their tracking timeline survives a refresh
+// and the round trip to a payment provider's checkout page.
+
+const GIFTS_KEY = 'burden-gifts-v1'
+
+function loadGifts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GIFTS_KEY) || '[]')
+    return Array.isArray(saved) ? saved.map(g => settleDemoGift(g)) : []
+  } catch {
+    return []
+  }
+}
+
+// Coming back from checkout skips the splash and opens that gift.
+const checkoutReturn = takeCheckoutReturn()
 
 export default function App() {
-  const [splashShown, setSplashShown] = useState(true)
-  const [route, setRoute] = useState({ name: 'home' })
+  const [splashShown, setSplashShown] = useState(!checkoutReturn)
+  const [route, setRoute] = useState(checkoutReturn ? { name: 'gift', id: checkoutReturn.id } : { name: 'home' })
+  const [gifts, setGifts] = useState(() => {
+    const saved = loadGifts()
+    // A gift we've never seen (e.g. checkout finished on another tab): keep
+    // a stub so GiftDetail can fetch the rest from the server.
+    if (checkoutReturn && !saved.some(g => g.id === checkoutReturn.id)) {
+      saved.push({ id: checkoutReturn.id, token: checkoutReturn.token, live: true, status: 'initiated', events: [] })
+    }
+    return saved
+  })
+
+  useEffect(() => {
+    try { localStorage.setItem(GIFTS_KEY, JSON.stringify(gifts)) } catch { /* private mode — keep in memory */ }
+  }, [gifts])
   const [joinedPrayerGroups, setJoinedPrayerGroups] = useState(new Set())
+  const [creditBalance, setCreditBalance] = useState(0)
+  const [donorName, setDonorName] = useState('')
 
   const navigate = useCallback((next) => {
     setRoute(next)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [])
+
+  const recordGift = useCallback((gift) => {
+    setGifts(prev => [...prev, gift])
+    // If the gift was paid from the donor's account credit, debit it.
+    if (gift.fromCredit) {
+      setCreditBalance(b => Math.max(0, Math.round((b - gift.amount) * 100) / 100))
+    }
+  }, [])
+
+  const updateGift = useCallback((id, patch) => {
+    setGifts(prev => prev.map(g => (g.id === id ? { ...g, ...patch } : g)))
   }, [])
 
   const togglePrayerGroup = useCallback((burdenId) => {
-    setJoinedPrayerGroups((prev) => {
+    setJoinedPrayerGroups(prev => {
       const next = new Set(prev)
       if (next.has(burdenId)) next.delete(burdenId); else next.add(burdenId)
       return next
     })
   }, [])
 
+  const addCredit = useCallback((amount) => {
+    setCreditBalance(b => Math.round((b + Number(amount)) * 100) / 100)
+  }, [])
+
+  const updateName = useCallback((name) => {
+    setDonorName(name)
+  }, [])
+
+  // Profile object passed to screens that read donor identity / balance / gifts.
+  // Only gifts that actually went through count as giving.
+  const givenGifts = useMemo(() => gifts.filter(isGiven), [gifts])
+  const profile = useMemo(() => ({
+    name: donorName,
+    creditBalance,
+    gifts: givenGifts,
+    giftCount: givenGifts.length,
+  }), [donorName, creditBalance, givenGifts])
+
   if (splashShown) {
-    return (
-      <>
-        <div className="app-glow" aria-hidden="true" />
-        <Splash onDismiss={() => setSplashShown(false)} />
-      </>
-    )
+    return <Splash onDismiss={() => setSplashShown(false)} />
   }
 
   let screen
   switch (route.name) {
-    case 'list':
-      screen = <List view={route.view || 'weekly'} navigate={navigate} />
-      break
-    case 'deck':
-    case 'discover':
-      screen = <Discover navigate={navigate} />
-      break
-    case 'campaign':
-      screen = (
-        <Campaign
-          id={route.id}
-          from={route.from}
-          view={route.view}
-          navigate={navigate}
-          joined={joinedPrayerGroups.has(route.id)}
-          onTogglePrayer={() => togglePrayerGroup(route.id)}
-        />
-      )
-      break
+    case 'discover': screen = <Discover navigate={navigate} />; break
+    case 'campaign': screen = (
+      <Campaign
+        id={route.id}
+        navigate={navigate}
+        joined={joinedPrayerGroups.has(route.id)}
+        onTogglePrayer={() => togglePrayerGroup(route.id)}
+      />
+    ); break
+    case 'give':     screen = (
+      <Give
+        id={route.id}
+        navigate={navigate}
+        recordGift={recordGift}
+        profile={profile}
+      />
+    ); break
+    case 'history':  screen = <History gifts={gifts} navigate={navigate} />; break
+    case 'gift':     screen = (
+      <GiftDetail
+        gift={gifts.find(g => g.id === route.id)}
+        navigate={navigate}
+        updateGift={updateGift}
+      />
+    ); break
+    case 'profile':  screen = (
+      <Profile
+        profile={profile}
+        navigate={navigate}
+        addCredit={addCredit}
+        updateName={updateName}
+      />
+    ); break
+    case 'about':    screen = <About />; break
     case 'home':
-    default:
-      screen = <Home navigate={navigate} />
-      break
+    default:         screen = <Home navigate={navigate} profile={profile} />; break
   }
 
   return (
     <>
-      <div className="app-glow" aria-hidden="true" />
+      <Header navigate={navigate} creditBalance={creditBalance} />
       {screen}
+      <Footer />
+      <Dock route={route} navigate={navigate} givingCount={givenGifts.length} />
     </>
   )
 }

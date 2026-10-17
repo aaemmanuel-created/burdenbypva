@@ -2,18 +2,41 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#f4f6fb" />
-    <meta name="description" content="BURDEN by PVA — carry a burden before the Lord" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Burden" />
-    <title>BURDEN by PVA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="description" content="BURDEN by HOUSEPVA — Bear one another's burdens. A trustworthy way to give to churches and Christian institutions worldwide." />
+    <title>BURDEN by HOUSEPVA</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Helvetica throughout, as in the native app. -->
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body, #root {
+        width: 100%;
+        min-height: 100vh;
+        background: #f7f6f2;
+        color: #0a0a0a;
+        font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      /* the floating dock sits over the page; leave room under the last item */
+      body { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+      /* two-column layouts collapse to one on phones */
+      .split-2 { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 56px; align-items: start; }
+      .split-2 > aside { position: sticky; top: 24px; }
+      .invite-2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 32px; align-items: center; }
+      @media (max-width: 860px) {
+        .split-2 { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+        .split-2 > aside { position: static; }
+        .invite-2 { grid-template-columns: minmax(0, 1fr); }
+      }
+      a { color: inherit; text-decoration: none; }
+      button { font-family: inherit; cursor: pointer; }
+      input, textarea, select { font-family: inherit; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

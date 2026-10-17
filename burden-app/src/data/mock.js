@@ -1,3 +1,7 @@
+import saturdaySchool from '../assets/burdens/saturday-school.jpg'
+import osuBursary from '../assets/burdens/osu-bursary.jpg'
+import redeemerClinic from '../assets/burdens/redeemer-clinic.jpg'
+
 // Mock data for the BURDEN MVP demo.
 // In production these come from the verified-church and campaign services.
 
@@ -79,6 +83,7 @@ export const campaigns = [
     id: 'cmp_grace_school',
     churchId: 'ch_nairobi_grace',
     title: 'Saturday School — Term Materials',
+    image: saturdaySchool,
     summary:
       "Books, uniforms, and a daily meal for 84 children attending the Saturday school this term.",
     raised: 4280,
@@ -114,6 +119,7 @@ export const campaigns = [
     id: 'cmp_redeemer_clinic',
     churchId: 'ch_lagos_redeemer',
     title: 'Mobile Medical Outreach — Q2',
+    image: redeemerClinic,
     summary:
       "Fuel, medicines, and clinician fees for four weekend clinics in Makoko and Ajegunle.",
     raised: 12640,
@@ -149,6 +155,7 @@ export const campaigns = [
     id: 'cmp_andrew_bursary',
     churchId: 'ch_accra_st_andrew',
     title: 'Osu Bursary Fund — 2026 Intake',
+    image: osuBursary,
     summary:
       "School fees and exam registration for 22 students entering senior secondary this September.",
     raised: 6100,

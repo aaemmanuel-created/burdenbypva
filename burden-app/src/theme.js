@@ -1,46 +1,92 @@
-// BURDEN by PVA — design tokens
-// Glass-blue palette, mobile-first. JetBrains Mono everywhere except the splash
-// thank-you line (Helvetica) and the menu items (Helvetica).
+// BURDEN by HOUSEPVA — design tokens
+// Reverent, trustworthy, warm, plain. No religious iconography by default.
+//
+// 2026-10-17: brought in line with the native app (burden-native/src/
+// constants/theme.ts) — Helvetica throughout, lighter blue gradient tiles,
+// amber mid-funding tone. Keep the two files in step.
 
 export const colors = {
-  bg: '#f4f6fb',
-  bgPure: '#ffffff',
-  fg: '#0b1638',
-  fgSoft: '#1f2c52',
-  muted: 'rgba(11,22,56,0.5)',
-  mutedStrong: 'rgba(11,22,56,0.72)',
-  line: 'rgba(11,22,56,0.08)',
-  lineStrong: 'rgba(11,22,56,0.14)',
-  navyDeep: '#0b1638',
-  navyMid: '#1a2c66',
-  navyBright: '#3d5db5',
-  accent: '#2b4aa3',
-  accentSoft: 'rgba(43,74,163,0.10)',
-  accentBorder: 'rgba(43,74,163,0.28)',
+  bg: '#f7f6f2',          // warm paper
+  bgAlt: '#ecebe5',       // subtle panel
+  ink: '#0a0a0a',         // primary text
+  inkSoft: '#4a4a4a',     // secondary text
+  inkMuted: '#8a8a85',    // tertiary / labels
+  rule: '#1a1a1a',        // hairlines & strong borders (inputs + hero card ONLY per §4)
+  ruleSoft: '#d8d6cf',    // soft dividers (inputs only per §4)
+  accent: '#1a1a1a',      // primary action (mono, restrained)
+  accentInk: '#f7f6f2',   // text on accent
+  trust: '#2c5e3f',       // verified badge — quiet evergreen (paper bg)
+  warn: '#8a5a2b',        // pending — quiet ochre (paper bg)
+  trustOnNavy: '#7ec48a', // verified badge — bright evergreen (navy bg)
+  warnOnNavy: '#e0a86b',  // pending — warm ochre (navy bg)
 
-  // Legacy aliases kept so unused screens (Give, History, About) keep compiling.
-  ink: '#0b1638',
-  inkSoft: '#1f2c52',
-  inkMuted: 'rgba(11,22,56,0.5)',
-  rule: 'rgba(11,22,56,0.14)',
-  ruleSoft: 'rgba(11,22,56,0.08)',
-  accentInk: '#ffffff',
-  bgAlt: '#ecedf3',
-  trust: '#2c5e3f',
-  warn: '#8a5a2b',
+  // Blue tile palette — lightened 2026-10-17 to match the app (was #0b1a35).
+  navy:        '#3a69ad',
+  navyTop:     '#5a8bd1',   // tile gradient: light top …
+  navyBottom:  '#2d5797',   // … to deeper bottom
+  navyDeep:    '#1d3a6e',   // text on white buttons inside a tile
+  navyEdge:    '#6b95d3',
+  navyInk:     '#eef2fb',   // primary text on blue
+  navySoft:    '#e8eef9',   // secondary text on blue
+  navyMuted:   '#cfdcf2',   // tertiary text on blue
+  navyRule:    'rgba(255,255,255,0.10)',
+  navyHi:      'rgba(255,255,255,0.10)',  // top sheen
+  navyLo:      'rgba(0,0,0,0.38)',        // bottom shadow inside tile
+
+  // Funding square tones: red (under a third), amber (halfway), green (almost / fully)
+  fundLow:  '#c44a3e',
+  fundMid:  '#e09a2d',
+  fundHigh: '#3f8a5a',
 }
 
+// Blue gradient + soft lift — used on tiles to "pop".
+export const tile = {
+  background: `
+    linear-gradient(180deg, ${colors.navyHi} 0%, rgba(255,255,255,0) 38%),
+    linear-gradient(160deg, ${colors.navyTop} 0%, ${colors.navyBottom} 100%)
+  `,
+  border: '1px solid ' + colors.navyEdge,
+  shadow: [
+    '0 1px 0 rgba(255,255,255,0.14) inset',
+    '0 14px 24px -14px rgba(5,12,29,0.45)',
+  ].join(', '),
+  shadowHover: [
+    '0 1px 0 rgba(255,255,255,0.18) inset',
+    '0 22px 36px -16px rgba(5,12,29,0.5)',
+  ].join(', '),
+  ink:    colors.navyInk,
+  soft:   colors.navySoft,
+  muted:  colors.navyMuted,
+  rule:   colors.navyRule,
+}
+
+// Helvetica throughout, as in the app. The three keys are kept so existing
+// screens keep working; they all resolve to the same stack now.
+const helvetica = "Helvetica, 'Helvetica Neue', Arial, sans-serif"
 export const font = {
-  mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
-  helvetica: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  serif: helvetica,
+  sans: helvetica,
+  mono: helvetica,
 }
 
-export const space = (n) => `${n * 4}px`
+// Type scale (px) — §2, do not deviate.
+export const type = {
+  xs:    { fontSize: 12, lineHeight: 1.45 },
+  sm:    { fontSize: 14, lineHeight: 1.45 },
+  base:  { fontSize: 16, lineHeight: 1.5 },
+  lg:    { fontSize: 18, lineHeight: 1.5 },
+  xl:    { fontSize: 22, lineHeight: 1.35 },
+  '2xl': { fontSize: 28, lineHeight: 1.25 },
+  '3xl': { fontSize: 40, lineHeight: 1.2 },
+}
+
+// Strict 8px spacing scale (§3): 8, 16, 24, 32, 48, 64, 96, 128.
+// space(1)=8 … 4px exists solely for inline icon nudges.
+export const space = (n) => `${n * 8}px`
 
 export const radius = {
   none: '0px',
   sm: '2px',
   md: '4px',
-  lg: '14px',
-  xl: '22px',
+  tile: '14px',
 }

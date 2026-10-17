@@ -10,9 +10,16 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { campaigns, churches, events, type Campaign, type Church, type Event } from '../data/mock';
-import { colors, font, formatMoney } from '../constants/theme';
-import { Badge, Button, Label, Progress, Rule } from '../components/UI';
+import { colors, font, formatMoney, tile } from '../constants/theme';
+import { Badge, Button, FundingSquare, Label, Progress, Rule, Tile } from '../components/UI';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
+import { DOCK_SPACE } from '../components/Dock';
+import { DockSurfaceCtx, useDockSurface } from '../lib/dockSurface';
+import { useGifts } from '../context/GiftsContext';
+import { isGiven, statusLabel } from '../lib/giftTimeline';
+
+// This week's highlighted burden.
+const HIGHLIGHT_ID = 'cmp_andrew_bursary';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'Home'>,
@@ -20,17 +27,66 @@ type Nav = CompositeNavigationProp<
 >;
 
 export default function HomeScreen({ navigation }: { navigation: Nav }) {
-  const highlight = campaigns.find((c) => c.id === 'cmp_redeemer_clinic')!;
+  // The highlight is always a photo tile: this week's pick if it has a photo,
+  // otherwise the first burden that does.
+  const highlight = campaigns.find((c) => c.id === HIGHLIGHT_ID && c.image)
+    ?? campaigns.find((c) => c.image)
+    ?? campaigns[0];
   const highlightChurch = churches.find((c) => c.id === highlight.churchId)!;
+  const surface = useDockSurface();
+
+  // Shared Burdens: every burden this donor has given to, newest gift first,
+  // with their total and where their latest gift has got to.
+  const { gifts } = useGifts();
+  const shared = [...gifts].filter(isGiven).reverse().reduce<
+    { campaign: Campaign; total: number; latestGiftId: string; status: string }[]
+  >((list, g) => {
+    const existing = list.find((s) => s.campaign.id === g.campaignId);
+    if (existing) { existing.total += g.amount; return list; }
+    const campaign = campaigns.find((c) => c.id === g.campaignId);
+    if (campaign) list.push({ campaign, total: g.amount, latestGiftId: g.id, status: statusLabel(g) });
+    return list;
+  }, []);
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 48 }}>
+    <DockSurfaceCtx.Provider value={surface.ctx}>
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={{ paddingBottom: DOCK_SPACE + 48 }}
+      onScroll={surface.onScroll}
+      scrollEventThrottle={16}
+    >
       <SectionTitle label="Highlight of the week" />
       <HighlightCard
         campaign={highlight}
         church={highlightChurch}
         onPress={() => navigation.navigate('Campaign', { campaignId: highlight.id })}
       />
+
+      <Rule style={{ marginTop: 32 }} />
+
+      <SectionTitle label="Shared Burdens" />
+      <View style={{ paddingHorizontal: 20, gap: 12 }}>
+        {shared.length === 0 ? (
+          <Text style={styles.emptyShared}>
+            Burdens you give to will appear here, so you can follow each one.
+          </Text>
+        ) : (
+          shared.map((s) => (
+            <View key={s.campaign.id} style={{ gap: 8 }}>
+              <Pressable onPress={() => navigation.navigate('Gift', { giftId: s.latestGiftId })}>
+                <Text style={styles.sharedLine}>
+                  YOU SHARED {formatMoney(s.total)} · {s.status.toUpperCase()} →
+                </Text>
+              </Pressable>
+              <ProjectCard
+                campaign={s.campaign}
+                onPress={() => navigation.navigate('Campaign', { campaignId: s.campaign.id })}
+              />
+            </View>
+          ))
+        )}
+      </View>
 
       <Rule style={{ marginTop: 32 }} />
 
@@ -77,6 +133,7 @@ export default function HomeScreen({ navigation }: { navigation: Nav }) {
           ))}
       </View>
     </ScrollView>
+    </DockSurfaceCtx.Provider>
   );
 }
 
@@ -98,26 +155,34 @@ function HighlightCard({
 }: { campaign: Campaign; church: Church; onPress: () => void }) {
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
   return (
-    <Pressable onPress={onPress} style={styles.highlight}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <Label>{campaign.category}</Label>
-        {church.verified && <Badge tone="trust">{church.tier}</Badge>}
+    <Tile
+      onPress={onPress}
+      image={campaign.image}
+      imageColour={campaign.imageColour}
+      funded={campaign.raised / campaign.goal}
+      style={styles.highlight}
+    >
+      <View style={styles.tileTop}>
+        <View style={styles.tileTopLeft}>
+          <Badge onNavy>{campaign.category}</Badge>
+          {church.verified && <Badge tone="trust" onNavy>{church.tier}</Badge>}
+        </View>
+        <FundingSquare raised={campaign.raised} goal={campaign.goal} size={18} />
       </View>
+      {campaign.image && <View style={{ flex: 1 }} />}
 
       <Text style={styles.highlightTitle}>{campaign.title}</Text>
       <Text style={styles.highlightChurch}>
-        {church.name.toUpperCase()} — {church.location.toUpperCase()}
+        {church.name.toUpperCase()}
+        {'\n'}<Text style={styles.locationLine}>{church.location.toUpperCase()}</Text>
       </Text>
-      <Text style={styles.highlightSummary}>{campaign.summary}</Text>
-
       <View style={styles.highlightStatsRow}>
         <Stat label="Raised" value={formatMoney(campaign.raised)} />
         <Stat label="Goal" value={formatMoney(campaign.goal)} />
-        <Stat label="Donors" value={String(campaign.donors)} />
       </View>
 
       <View style={{ marginTop: 18, gap: 10 }}>
-        <Progress value={campaign.raised} goal={campaign.goal} />
+        <Progress value={campaign.raised} goal={campaign.goal} onNavy />
         <View style={styles.highlightMeta}>
           <Text style={styles.metaText}>{pct}% funded</Text>
           <Text style={styles.metaText}>{campaign.daysLeft} days left</Text>
@@ -125,16 +190,16 @@ function HighlightCard({
       </View>
 
       <View style={{ marginTop: 18 }}>
-        <Button onPress={onPress}>View campaign</Button>
+        <Button variant="onNavy" onPress={onPress}>View burden</Button>
       </View>
-    </Pressable>
+    </Tile>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View>
-      <Label>{label}</Label>
+      <Label onNavy>{label}</Label>
       <Text style={styles.statValue}>{value}</Text>
     </View>
   );
@@ -144,45 +209,50 @@ function ProjectCard({ campaign, onPress }: { campaign: Campaign; onPress: () =>
   const church = churches.find((c) => c.id === campaign.churchId)!;
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
   return (
-    <Pressable onPress={onPress} style={styles.projectCard}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Label>{campaign.category}</Label>
-        {church.verified && <Badge tone="trust">Verified</Badge>}
+    <Tile
+      onPress={onPress}
+      padding={20}
+      image={campaign.image}
+      imageColour={campaign.imageColour}
+      funded={campaign.raised / campaign.goal}
+      style={styles.projectCard}
+    >
+      <View style={[styles.tileTop, { marginBottom: 0 }]}>
+        <View style={styles.tileTopLeft}>
+          <Badge onNavy>{campaign.category}</Badge>
+          {church.verified && <Badge tone="trust" onNavy>{church.tier}</Badge>}
+        </View>
+        <FundingSquare raised={campaign.raised} goal={campaign.goal} />
       </View>
+      {campaign.image && <View style={{ flex: 1 }} />}
       <Text style={styles.cardTitle}>{campaign.title}</Text>
       <Text style={styles.cardSubtitle}>
-        {church.name.toUpperCase()} — {church.location.toUpperCase()}
+        {church.name.toUpperCase()}
+        {'\n'}<Text style={styles.locationLine}>{church.location.toUpperCase()}</Text>
       </Text>
-      <Text style={styles.cardSummary}>{campaign.summary}</Text>
-      <View style={{ marginTop: 12 }}>
-        <Progress value={campaign.raised} goal={campaign.goal} />
+      <View style={{ marginTop: 4 }}>
+        <Progress value={campaign.raised} goal={campaign.goal} onNavy />
         <View style={styles.projectMeta}>
-          <Text style={styles.metaText}>
-            {pct}% — {campaign.donors} donors
-          </Text>
+          <Text style={styles.metaText}>{pct}% funded</Text>
           <Text style={styles.metaText}>{campaign.daysLeft}d left</Text>
         </View>
       </View>
-    </Pressable>
+    </Tile>
   );
 }
 
 function ChurchCard({ church, onPress }: { church: Church; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.projectCard}>
+    <Tile onPress={onPress} padding={20} style={styles.projectCard}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Label>{church.tradition}</Label>
-        {church.verified && <Badge tone="trust">{church.tier}</Badge>}
+        <Badge onNavy>{church.tradition}</Badge>
+        {church.verified && <Badge tone="trust" onNavy>{church.tier}</Badge>}
       </View>
       <Text style={styles.cardTitle}>{church.name}</Text>
       <Text style={styles.cardSubtitle}>
-        {church.location.toUpperCase()} · EST. {church.founded}
+        {church.location.toUpperCase()}
       </Text>
-      <Text style={styles.cardSummary}>{church.summary}</Text>
-      <Text style={[styles.metaText, { marginTop: 10 }]}>
-        {church.members.toLocaleString()} MEMBERS
-      </Text>
-    </Pressable>
+    </Tile>
   );
 }
 
@@ -198,11 +268,11 @@ function EventRow({ event }: { event: Event }) {
         <Text style={styles.eventMonth}>{month}</Text>
       </View>
       <View style={{ flex: 1, gap: 6 }}>
-        <Text style={styles.cardTitle}>{event.title}</Text>
-        <Text style={styles.cardSubtitle}>
+        <Text style={styles.eventTitle}>{event.title}</Text>
+        <Text style={styles.eventSubtitle}>
           {(church ? church.name : 'BURDEN').toUpperCase()} · {event.location.toUpperCase()}
         </Text>
-        <Text style={styles.cardSummary}>{event.summary}</Text>
+        <Text style={styles.eventSummary}>{event.summary}</Text>
       </View>
       <Badge>{event.category}</Badge>
     </View>
@@ -210,6 +280,12 @@ function EventRow({ event }: { event: Event }) {
 }
 
 const styles = StyleSheet.create({
+  tileTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16,
+  },
+  emptyShared: { fontFamily: font.regular, fontSize: 13, lineHeight: 20, color: colors.inkSoft },
+  sharedLine: { fontFamily: font.bold, fontSize: 10, letterSpacing: 1.5, color: colors.inkSoft },
+  tileTopLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, flexWrap: 'wrap' },
   sectionTitle: {
     paddingHorizontal: 20,
     paddingTop: 32,
@@ -226,30 +302,23 @@ const styles = StyleSheet.create({
   },
   highlight: {
     marginHorizontal: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    backgroundColor: colors.bgAlt,
   },
   highlightTitle: {
     fontFamily: font.bold,
     fontSize: 22,
-    color: colors.ink,
+    color: tile.ink,
     lineHeight: 28,
     marginBottom: 10,
   },
+  // City and country sit on their own line under the church's name, a step quieter.
+  locationLine: { opacity: 0.75 },
   highlightChurch: {
     fontFamily: font.regular,
     fontSize: 10,
     letterSpacing: 1,
-    color: colors.inkMuted,
+    lineHeight: 15,
+    color: tile.muted,
     marginBottom: 14,
-  },
-  highlightSummary: {
-    fontFamily: font.regular,
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.inkSoft,
   },
   highlightStatsRow: {
     flexDirection: 'row',
@@ -263,34 +332,28 @@ const styles = StyleSheet.create({
   statValue: {
     fontFamily: font.bold,
     fontSize: 16,
-    color: colors.ink,
+    color: tile.ink,
     marginTop: 4,
   },
   projectCard: {
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    backgroundColor: colors.bg,
     gap: 10,
   },
   cardTitle: {
     fontFamily: font.bold,
     fontSize: 15,
-    color: colors.ink,
+    color: tile.ink,
     lineHeight: 20,
   },
   cardSubtitle: {
     fontFamily: font.regular,
     fontSize: 10,
     letterSpacing: 1,
-    color: colors.inkMuted,
+    lineHeight: 15,
+    color: tile.muted,
   },
-  cardSummary: {
-    fontFamily: font.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.inkSoft,
-  },
+  eventTitle: { fontFamily: font.bold, fontSize: 15, color: colors.ink, lineHeight: 20 },
+  eventSubtitle: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: colors.inkMuted },
+  eventSummary: { fontFamily: font.regular, fontSize: 12, lineHeight: 18, color: colors.inkSoft },
   projectMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -300,7 +363,7 @@ const styles = StyleSheet.create({
     fontFamily: font.regular,
     fontSize: 10,
     letterSpacing: 1,
-    color: colors.inkSoft,
+    color: tile.soft,
   },
   eventRow: {
     flexDirection: 'row',

@@ -6,7 +6,7 @@ BURDEN by PVA is a global Christian fundraising platform. The current implementa
 
 Before doing anything, also read:
 
-- **`../_workflow/PVA-WORKFLOW.md`** — the cross-app dispatch / build / permissions workflow. Defines the **Standard build loop** that this folder's `.claude/settings.json` enforces, and the parity rule (every change ships to web + iOS + Android).
+- **`../_workflow/HOUSEPVA-WORKFLOW.md`** — the cross-app dispatch / build / permissions workflow. Defines the **Standard build loop** that this folder's `.claude/settings.json` enforces, and the parity rule (every change ships to web + iOS + Android).
 - **`../_workflow/DISPATCH-PROMPTS/`** — drop-in prompts for bugfix, feature, OTA push, dependency bump, store-readiness, brand pass, cleanup, inbox drain, and parity check.
 - **`../_workflow/INBOX.md`** — one-line dispatch requests Emmanuel drops in from his phone.
 
@@ -14,7 +14,7 @@ Before doing anything, also read:
 
 The "Auto-permissions" agreement below is now actually executable via `.claude/settings.json` (see `../_workflow/proposed-settings/INSTALL.md` if it isn't installed yet).
 
-BURDEN has **three surfaces** that must stay at feature parity: web (`burden-app/`), iOS and Android (`burden-native/`). End every change-the-app session with a parity status line per `PVA-WORKFLOW.md` §1.
+BURDEN has **three surfaces** that must stay at feature parity: web (`burden-app/`), iOS and Android (`burden-native/`). End every change-the-app session with a parity status line per `HOUSEPVA-WORKFLOW.md` §1.
 
 ---
 
@@ -58,7 +58,8 @@ Overwrite the file each time — it is not an append-only log. The next session 
 
 ## Project layout
 
-- `burden-app/` — the working web app (Vite 6 + React 18, JetBrains Mono, no auth, no real payment processor yet — donations are a mock checkout that records into in-memory state)
+- `burden-app/` — the working web app (Vite 6 + React 18, no auth). Gifts persist in localStorage and each has a five-step tracking timeline (`src/lib/giftTimeline.js`, mirrored in `burden-native/src/lib/giftTimeline.ts`).
+- `supabase/` — payment server: Stripe + Paystack + Flutterwave via hosted checkout, gifts + timeline events in Postgres, **test mode only**. Without `VITE_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_URL` the apps fall back to the demo checkout. Setup + go-live checklist: `PAYMENTS-SETUP.md`. Tests: `node --test 'supabase/tests/*.test.ts'`.
 - `BURDEN_blueprint.md`, `BURDEN_blueprint.docx`, `BURDEN_master_prompt.md` — full product spec
 - `.claude/launch.json` — preview-server config (port 5174)
 - `Screenshot *.png` — reference screenshots from earlier discovery

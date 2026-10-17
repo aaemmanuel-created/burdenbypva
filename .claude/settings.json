@@ -2,11 +2,11 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Read(/Users/emmanuelanie-akwetey/Emmanuel's Assistant - Claude Cowork AI/PVA/BURDEN by PVA/**)",
-      "Edit(/Users/emmanuelanie-akwetey/Emmanuel's Assistant - Claude Cowork AI/PVA/BURDEN by PVA/**)",
-      "Write(/Users/emmanuelanie-akwetey/Emmanuel's Assistant - Claude Cowork AI/PVA/BURDEN by PVA/**)",
-      "Read(/Users/emmanuelanie-akwetey/Emmanuel's Assistant - Claude Cowork AI/PVA/_workflow/**)",
-      "Read(/Users/emmanuelanie-akwetey/Emmanuel's Assistant - Claude Cowork AI/PVA/PVA Brand Kit/**)",
+      "Read(/Users/emmanuelanie-akwetey/ClaudeCowork/HOUSEPVA/BURDEN-by-HOUSEPVA/**)",
+      "Edit(/Users/emmanuelanie-akwetey/ClaudeCowork/HOUSEPVA/BURDEN-by-HOUSEPVA/**)",
+      "Write(/Users/emmanuelanie-akwetey/ClaudeCowork/HOUSEPVA/BURDEN-by-HOUSEPVA/**)",
+      "Read(/Users/emmanuelanie-akwetey/ClaudeCowork/HOUSEPVA/_workflow/**)",
+      "Read(/Users/emmanuelanie-akwetey/ClaudeCowork/HOUSEPVA/HOUSEPVA Brand Kit/**)",
       "Read(/tmp/**)",
       "Write(/tmp/**)",
       "Edit(/tmp/**)",
@@ -106,6 +106,14 @@
       "Bash(git commit:*)",
       "Bash(git stash)",
       "Bash(git stash:*)",
+      "Bash(git stash pop)",
+      "Bash(git stash pop:*)",
+      "Bash(git rebase:*)",
+      "Bash(git rebase --continue)",
+      "Bash(git rebase --abort)",
+      "Bash(git rebase --skip)",
+      "Bash(git checkout --ours:*)",
+      "Bash(git checkout --theirs:*)",
       "Bash(git tag)",
       "Bash(git tag -a:*)",
       "Bash(git tag -l:*)",
@@ -162,6 +170,7 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh auth status)",
+      "Bash(gh api:*)",
       "Bash(ls)",
       "Bash(ls -la)",
       "Bash(ls -l)",
@@ -169,6 +178,8 @@
       "Bash(ls -A)",
       "Bash(pwd)",
       "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
       "Bash(cat:*)",
       "Bash(head:*)",
       "Bash(tail:*)",
@@ -196,6 +207,9 @@
       "Bash(curl -sI:*)",
       "Bash(curl -s --head:*)",
       "Bash(curl -s -o /dev/null:*)",
+      "Bash(python3 scripts/build-settings.py)",
+      "Bash(python3 scripts/build-settings.py:*)",
+      "Bash(bash scripts/check-generator-output.sh)",
       "mcp__Claude_Preview__preview_start",
       "mcp__Claude_Preview__preview_screenshot",
       "mcp__Claude_Preview__preview_console_logs",
@@ -478,7 +492,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"/Users/emmanuelanie-akwetey/Emmanuel's Assistant - Claude Cowork AI/PVA/_workflow/scripts/eas-build-gate.sh\" BURDEN"
+            "command": "bash \"/Users/emmanuelanie-akwetey/ClaudeCowork/HOUSEPVA/_workflow/scripts/eas-build-gate.sh\" BURDEN"
           }
         ]
       }

@@ -1,4 +1,4 @@
-import { colors } from '../theme.js'
+import { colors, font, type } from '../theme.js'
 import { Label, Rule } from '../components/UI.jsx'
 import { principles } from '../data/mock.js'
 
@@ -6,12 +6,12 @@ export default function About() {
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '64px 28px 0' }}>
       <Label>About</Label>
-      <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: -0.5, marginTop: 14, marginBottom: 36, lineHeight: 1.15 }}>
+      <h1 style={{ fontFamily: font.serif, fontSize: type['3xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%', marginTop: 14, marginBottom: 36, lineHeight: 1.15 }}>
         A trustworthy way to give to the global church.
       </h1>
 
       <p style={{ fontSize: 14, lineHeight: 1.8, color: colors.inkSoft, marginBottom: 24 }}>
-        BURDEN by PVA is a global Christian fundraising platform. It exists so that local churches
+        BURDEN by HOUSEPVA is a global Christian fundraising platform. It exists so that local churches
         and Christian institutions can raise funds transparently from regular people, anywhere in
         the world. Donors can give as little as one dollar. Every church is verified before it
         can receive funds.
@@ -43,7 +43,7 @@ export default function About() {
               alignItems: 'baseline',
             }}>
               <span style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: colors.inkMuted,
                 letterSpacing: 1,
               }}>{String(i + 1).padStart(2, '0')}</span>
@@ -72,10 +72,10 @@ export default function About() {
               alignItems: 'baseline',
             }}>
               <span style={{
-                fontSize: 11, letterSpacing: 2, textTransform: 'uppercase',
+                fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
                 fontWeight: 600, color: colors.ink,
               }}>{t.tier}</span>
-              <span style={{ fontSize: 13, lineHeight: 1.6, color: colors.inkSoft }}>{t.desc}</span>
+              <span style={{ fontSize: 14, lineHeight: 1.6, color: colors.inkSoft }}>{t.desc}</span>
             </div>
           ))}
         </div>

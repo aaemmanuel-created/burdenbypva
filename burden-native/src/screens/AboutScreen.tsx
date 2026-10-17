@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Label, Rule } from '../components/UI';
+import { DOCK_SPACE } from '../components/Dock';
 import { colors, font } from '../constants/theme';
 import { principles } from '../data/mock';
 
@@ -12,12 +13,12 @@ const TIERS = [
 
 export default function AboutScreen() {
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 64 }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: DOCK_SPACE + 64 }}>
       <Label>About</Label>
       <Text style={styles.h1}>A trustworthy way to give to the global church.</Text>
 
       <Text style={styles.body}>
-        BURDEN by PVA is a global Christian fundraising platform. It exists so that local churches
+        BURDEN by HOUSEPVA is a global Christian fundraising platform. It exists so that local churches
         and Christian institutions can raise funds transparently from regular people, anywhere in
         the world. Donors can give as little as one dollar. Every church is verified before it can
         receive funds.

@@ -1,0 +1,26 @@
+# BURDEN by HOUSEPVA — Supabase project config (only the parts we change).
+project_id = "burdenbypva"
+
+# No donor login yet, and providers can't send a Supabase JWT, so each
+# function does its own check: a per-gift token, a webhook signature,
+# or CHURCH_ADMIN_KEY.
+[functions.create-gift]
+verify_jwt = false
+
+[functions.gift-status]
+verify_jwt = false
+
+[functions.checkout-return]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.paystack-webhook]
+verify_jwt = false
+
+[functions.flutterwave-webhook]
+verify_jwt = false
+
+[functions.church-confirm]
+verify_jwt = false
