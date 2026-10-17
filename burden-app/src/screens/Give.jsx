@@ -1,7 +1,11 @@
 import { useState } from 'react'
-import { colors } from '../theme.js'
-import { Button, Label, Rule, Badge, formatMoney } from '../components/UI.jsx'
+import { colors, font, type } from '../theme.js'
+import { Button, Label, formatMoney } from '../components/UI.jsx'
+import { haptic } from '../lib/useHaptic.ts'
 import { campaigns, churches } from '../data/mock.js'
+import Timeline from '../components/Timeline.jsx'
+import { PAYMENT_METHODS, liveCheckout, returnUrl, startCheckout } from '../lib/payments.js'
+import { demoEvents, demoHoldUntil } from '../lib/giftTimeline.js'
 
 const PRESETS = [5, 25, 100, 500]
 
@@ -17,7 +21,10 @@ export default function Give({ id, navigate, recordGift, profile }) {
   const [useCredit, setUseCredit] = useState(false)
   const [name, setName] = useState(profile?.name || '')
   const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [provider, setProvider] = useState('stripe')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [submitted, setSubmitted] = useState(null)
 
   if (!campaign) {
     return (
@@ -34,42 +41,82 @@ export default function Give({ id, navigate, recordGift, profile }) {
   const total = Math.round((value + fee) * 100) / 100
   const creditCovers = useCredit && credit >= value && value >= 1
 
-  function handleSubmit(e) {
+  const details = {
+    campaignId: campaign.id,
+    campaignTitle: campaign.title,
+    churchName: church.name,
+    amount: value,
+    coveredFee: creditCovers ? 0 : fee,
+    total: creditCovers ? value : total,
+    recurring,
+    anonymous,
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault()
-    if (value < 1) return
-    recordGift({
+    if (value < 1 || busy) return
+    haptic() // §7 — 16ms pulse before the gift is recorded (Android; no-op on iOS Safari)
+    setError('')
+    const timestamp = new Date().toISOString()
+
+    // Live checkout: record the gift on the server, then hand over to the
+    // provider's own payment page. It sends the donor back to ?gift=… and
+    // App opens that gift's timeline.
+    if (liveCheckout && !creditCovers) {
+      setBusy(true)
+      try {
+        const res = await startCheckout({
+          ...details, churchId: church.id, provider, coverFee, name, email, returnUrl: returnUrl(),
+        })
+        recordGift({
+          ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider,
+          status: 'initiated', timestamp, events: [{ step: 'gift_sent', occurred_at: timestamp }],
+        })
+        window.location.assign(res.checkoutUrl)
+      } catch (err) {
+        setError(err.message)
+        setBusy(false)
+      }
+      return
+    }
+
+    // Account credit, or the demo checkout when no payment server is set up.
+    const gift = {
+      ...details,
       id: 'gift_' + Date.now(),
-      campaignId: campaign.id,
-      campaignTitle: campaign.title,
-      churchName: church.name,
-      amount: value,
-      coveredFee: fee,
-      total,
-      recurring,
-      anonymous,
+      live: false,
       fromCredit: creditCovers,
-      donor: anonymous ? null : { name, email },
-      timestamp: new Date().toISOString(),
-    })
-    setSubmitted(true)
+      provider: creditCovers ? 'credit' : provider,
+      status: 'held',
+      holdUntil: demoHoldUntil(timestamp),
+      timestamp,
+      events: demoEvents(timestamp, creditCovers ? 'Paid from your account credit.' : 'Demo checkout — no payment processed.'),
+    }
+    recordGift(gift)
+    setSubmitted(gift)
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   if (submitted) {
     return (
-      <main style={{ maxWidth: 640, margin: '0 auto', padding: '96px 28px' }}>
+      <main style={{ maxWidth: 640, margin: '0 auto', padding: '96px 32px' }}>
         <Label>Gift received</Label>
         <h1 style={{
-          fontSize: 32, fontWeight: 300, letterSpacing: -0.5,
-          marginTop: 14, marginBottom: 20, lineHeight: 1.2,
+          fontFamily: font.serif,
+          fontSize: type['2xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%',
+          marginTop: 16, marginBottom: 24, lineHeight: type['2xl'].lineHeight,
         }}>
           Thank you. Your gift of {formatMoney(value)} is on its way to {church.name}.
         </h1>
-        <p style={{ fontSize: 13, lineHeight: 1.7, color: colors.inkSoft, marginBottom: 36 }}>
+        <p style={{ fontSize: type.sm.fontSize, lineHeight: 1.7, color: colors.inkSoft, marginBottom: 32 }}>
           A receipt will be emailed shortly. {recurring && 'Your recurring gift will run monthly until you cancel from your giving history.'}
-          {' '}You can view this gift any time in your giving history.
+          {' '}You can follow each step below, or any time from your giving history.
         </p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Button onClick={() => navigate({ name: 'history' })}>View giving history</Button>
+        <div style={{ marginBottom: 48 }}>
+          <Timeline gift={submitted} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button onClick={() => navigate({ name: 'gift', id: submitted.id })}>Track this gift</Button>
           <Button variant="ghost" onClick={() => navigate({ name: 'discover' })}>Back to Discover</Button>
         </div>
       </main>
@@ -88,16 +135,19 @@ export default function Give({ id, navigate, recordGift, profile }) {
       >← {campaign.title}</button>
 
       <Label>Give</Label>
-      <h1 style={{ fontSize: 28, fontWeight: 400, marginTop: 14, marginBottom: 8, lineHeight: 1.2 }}>
+      <h1 style={{
+        fontFamily: font.serif,
+        fontSize: type['2xl'].fontSize, fontWeight: 600,
+        marginTop: 16, marginBottom: 8, lineHeight: type['2xl'].lineHeight,
+        letterSpacing: '-1.5%',
+      }}>
         Support {church.name}
       </h1>
-      <div style={{ fontSize: 12, color: colors.inkMuted, letterSpacing: 1, marginBottom: 32 }}>
+      <div style={{ fontSize: type.xs.fontSize, color: colors.inkMuted, letterSpacing: '6%', marginBottom: 32 }}>
         {church.location} · {campaign.title}
       </div>
 
-      <Rule soft />
-
-      <form onSubmit={handleSubmit} style={{ marginTop: 40 }}>
+      <form onSubmit={handleSubmit} style={{ marginTop: 48 }}>
         {/* Amount */}
         <div style={{ marginBottom: 36 }}>
           <Label style={{ marginBottom: 14 }}>Amount (USD)</Label>
@@ -162,7 +212,9 @@ export default function Give({ id, navigate, recordGift, profile }) {
           )}
           <Toggle checked={recurring} onChange={setRecurring}
             label="Make this a monthly gift"
-            help="Cancel any time from your giving history." />
+            help={liveCheckout
+              ? 'Only this first gift is charged for now — automatic monthly repeats are not switched on yet.'
+              : 'Cancel any time from your giving history.'} />
           <Toggle checked={anonymous} onChange={setAnonymous}
             label="Give anonymously"
             help="Your name will not be visible to the church or other donors. We still hold a tax-receipt record." />
@@ -171,30 +223,54 @@ export default function Give({ id, navigate, recordGift, profile }) {
             help="When covered, 100% of your gift reaches the church." />
         </div>
 
-        {/* Donor info */}
-        {!anonymous && (
-          <div style={{ marginBottom: 36 }}>
-            <Label style={{ marginBottom: 14 }}>Your details</Label>
+        {/* Payment method */}
+        {!creditCovers && (
+          <fieldset style={{ border: 'none', padding: 0, margin: '0 0 36px' }}>
+            <legend style={{ padding: 0, marginBottom: 14 }}><Label>Pay with</Label></legend>
+            {PAYMENT_METHODS.map(m => (
+              <label key={m.id} style={{
+                display: 'flex', gap: 14, alignItems: 'flex-start', padding: '14px 0',
+                borderBottom: '1px solid ' + colors.ruleSoft, cursor: 'pointer',
+              }}>
+                <input
+                  type="radio" name="provider" value={m.id}
+                  checked={provider === m.id} onChange={() => setProvider(m.id)}
+                  style={{ marginTop: 3, accentColor: colors.ink }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: colors.ink }}>{m.label}</div>
+                  <div style={{ marginTop: 4, fontSize: 11, color: colors.inkMuted, lineHeight: 1.5 }}>{m.detail}</div>
+                </div>
+              </label>
+            ))}
+            <p style={{ marginTop: 12, fontSize: 11, color: colors.inkMuted, lineHeight: 1.5 }}>
+              You'll finish paying on the provider's secure page. BURDEN never sees your card or mobile-money PIN.
+            </p>
+          </fieldset>
+        )}
+
+        {/* Donor info — email is needed even for anonymous gifts (receipt). */}
+        <div style={{ marginBottom: 36 }}>
+          <Label style={{ marginBottom: 14 }}>Your details</Label>
+          {!anonymous && (
             <input
               type="text"
               placeholder="Full name"
               value={name}
               onChange={e => setName(e.target.value)}
               required
-              style={inputStyle}
+              style={{ ...inputStyle, marginBottom: 8 }}
             />
-            <input
-              type="email"
-              placeholder="Email for receipt"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              style={{ ...inputStyle, marginTop: 8 }}
-            />
-          </div>
-        )}
-
-        <Rule soft />
+          )}
+          <input
+            type="email"
+            placeholder="Email for receipt"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            style={inputStyle}
+          />
+        </div>
 
         {/* Summary */}
         <div style={{ padding: '24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -209,15 +285,21 @@ export default function Give({ id, navigate, recordGift, profile }) {
           <div style={{ fontSize: 28, fontWeight: 500 }}>{formatMoney(creditCovers ? value : total)}</div>
         </div>
 
-        <Button type="submit" full disabled={value < 1 || (!anonymous && (!name || !email)) || (useCredit && value > credit)}>
-          {creditCovers
-            ? `Give ${formatMoney(value)} from credit`
+        {error && (
+          <p role="alert" style={{ marginBottom: 16, fontSize: 13, color: colors.fundLow }}>{error}</p>
+        )}
+
+        <Button type="submit" full disabled={busy || value < 1 || !email || (!anonymous && !name) || (useCredit && value > credit)}>
+          {busy ? 'Opening secure checkout…'
+            : creditCovers ? `Give ${formatMoney(value)} from credit`
             : `Give ${formatMoney(total)}`}
         </Button>
 
         <p style={{ marginTop: 18, fontSize: 10, color: colors.inkMuted, lineHeight: 1.6, letterSpacing: 0.3 }}>
-          By giving you confirm you have read BURDEN's eligibility &amp; refund policy. This is a
-          demo checkout — no payment is processed.
+          By giving you confirm you have read BURDEN's eligibility &amp; refund policy.{' '}
+          {liveCheckout
+            ? 'Payments run in test mode — use the provider\'s test card or test mobile-money number. No real money is taken.'
+            : 'This is a demo checkout — no payment is processed.'}
         </p>
       </form>
     </main>

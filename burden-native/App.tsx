@@ -42,6 +42,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       },
       Campaign: 'campaign/:campaignId',
       Give: 'give/:campaignId',
+      Gift: 'gift',
     },
   },
 };

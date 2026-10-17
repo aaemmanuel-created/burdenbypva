@@ -1,5 +1,6 @@
 // Mock data for the BURDEN MVP demo.
 // Mirrors burden-app/src/data/mock.js exactly so both clients show the same content.
+import type { ImageSourcePropType } from 'react-native';
 
 export type Church = {
   id: string;
@@ -25,7 +26,21 @@ export type Campaign = {
   donors: number;
   daysLeft: number;
   category: 'Education' | 'Health' | 'Community' | 'Building';
+  // Optional photo filling the burden's tile. `image` is the black-and-white
+  // version; `imageColour` (same photo in colour) fades in on top as the
+  // burden is funded — see FundingPhoto in components/UI.tsx.
+  image?: ImageSourcePropType;
+  imageColour?: ImageSourcePropType;
+  // The people carrying this burden (shown as profile tiles on its page).
+  // `photo` is a face photo supplied by the church; initials show until then.
+  team?: TeamMember[];
 };
+
+export type TeamMember = { role: string; name: string; photo?: ImageSourcePropType };
+
+export type GiftStatus = 'initiated' | 'held' | 'paid_out' | 'church_confirmed' | 'failed' | 'cancelled';
+
+export type GiftEvent = { step: string; occurred_at: string; note?: string | null };
 
 export type Gift = {
   id: string;
@@ -37,8 +52,17 @@ export type Gift = {
   total: number;
   recurring: boolean;
   anonymous: boolean;
-  donor: { name: string; email: string } | null;
   timestamp: string;
+  // Tracking timeline. `live` gifts are checked against the payment server;
+  // demo gifts play out locally. `token` is the gift's private read key.
+  status: GiftStatus;
+  events: GiftEvent[];
+  holdUntil?: string | null;
+  statusNote?: string | null;
+  provider?: string;
+  live: boolean;
+  testMode?: boolean;
+  token?: string;
 };
 
 export const churches: Church[] = [
@@ -118,6 +142,13 @@ export const campaigns: Campaign[] = [
       "Books, uniforms, and a daily meal for 84 children attending the Saturday school this term.",
     raised: 4280, goal: 7500, currency: 'USD', donors: 312, daysLeft: 21,
     category: 'Education',
+    image: require('../../assets/burdens/saturday-school.jpg'),
+    team: [
+      { role: 'Burden lead', name: 'Rev. Mary Wanjiku' },
+      { role: 'Programme coordinator', name: 'Sarah Njeri' },
+      { role: 'Finance steward', name: 'James Karanja' },
+      { role: 'On-ground delivery', name: 'Teacher Esther Mwangi' },
+    ],
   },
   {
     id: 'cmp_redeemer_clinic',
@@ -127,6 +158,13 @@ export const campaigns: Campaign[] = [
       "Fuel, medicines, and clinician fees for four weekend clinics in Makoko and Ajegunle.",
     raised: 12640, goal: 18000, currency: 'USD', donors: 891, daysLeft: 14,
     category: 'Health',
+    image: require('../../assets/burdens/redeemer-clinic.jpg'),
+    team: [
+      { role: 'Burden lead', name: 'Pastor Tunde Adebayo' },
+      { role: 'Clinical lead', name: 'Dr. Funmi Adebowale (MBBS)' },
+      { role: 'Finance steward', name: 'Mrs. Bisi Okonkwo' },
+      { role: 'On-ground delivery', name: 'Outreach team — Yaba campus' },
+    ],
   },
   {
     id: 'cmp_andrew_bursary',
@@ -136,6 +174,13 @@ export const campaigns: Campaign[] = [
       "School fees and exam registration for 22 students entering senior secondary this September.",
     raised: 6100, goal: 9200, currency: 'USD', donors: 204, daysLeft: 38,
     category: 'Education',
+    image: require('../../assets/burdens/osu-bursary.jpg'),
+    team: [
+      { role: 'Burden lead', name: 'Rev. Dr. Kofi Mensah' },
+      { role: 'Bursary committee chair', name: 'Mrs. Adwoa Boateng' },
+      { role: 'Finance steward', name: 'Mr. Yaw Ofori, CA' },
+      { role: 'On-ground delivery', name: 'School liaison — Osu Presbyterian SHS' },
+    ],
   },
   {
     id: 'cmp_allnations_meals',
@@ -145,6 +190,12 @@ export const campaigns: Campaign[] = [
       "Groceries and kitchen costs for the weekly meal serving roughly 120 neighbours each Wednesday.",
     raised: 2150, goal: 4000, currency: 'USD', donors: 138, daysLeft: 9,
     category: 'Community',
+    team: [
+      { role: 'Burden lead', name: 'Pastor Grace Okoye' },
+      { role: 'Kitchen lead', name: 'Auntie Funke Adebayo' },
+      { role: 'Finance steward', name: 'Daniel Okafor (treasurer)' },
+      { role: 'On-ground delivery', name: 'Volunteer rota — Peckham fellowship' },
+    ],
   },
   {
     id: 'cmp_lighthouse_rebuild',
@@ -154,6 +205,12 @@ export const campaigns: Campaign[] = [
       "Roofing, electrical, and furnishing for the hall damaged by Typhoon Karding.",
     raised: 18900, goal: 32000, currency: 'USD', donors: 1102, daysLeft: 47,
     category: 'Building',
+    team: [
+      { role: 'Burden lead', name: 'Pastor Joel Ramos' },
+      { role: 'Site foreman', name: 'Engr. Romulo Santos (licensed)' },
+      { role: 'Finance steward', name: 'Marites Cruz, CPA' },
+      { role: 'On-ground delivery', name: 'Local contractors — vetted by Engr. Santos' },
+    ],
   },
 ];
 

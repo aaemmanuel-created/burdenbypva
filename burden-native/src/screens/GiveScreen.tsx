@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View, Pressable, Alert } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View, Pressable, Linking } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { campaigns, churches } from '../data/mock';
@@ -7,6 +7,8 @@ import { Button, Label, Rule } from '../components/UI';
 import { colors, font, formatMoney } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
 import type { RootStackParamList } from '../navigation/types';
+import { PAYMENT_METHODS, type ProviderId, liveCheckout, startCheckout } from '../lib/payments';
+import { demoEvents, demoHoldUntil } from '../lib/giftTimeline';
 
 const PRESETS = [5, 25, 100, 500];
 
@@ -24,6 +26,9 @@ export default function GiveScreen({ route, navigation }: Props) {
   const [coverFee, setCoverFee] = useState<boolean>(true);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
+  const [provider, setProvider] = useState<ProviderId>('stripe');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   if (!campaign || !church) {
     return (
@@ -36,12 +41,14 @@ export default function GiveScreen({ route, navigation }: Props) {
   const value = custom !== '' ? Number(custom) || 0 : amount;
   const fee = coverFee ? Math.round((value * 0.045 + 0.3) * 100) / 100 : 0;
   const total = Math.round((value + fee) * 100) / 100;
-  const canSubmit = value >= 1 && (anonymous || (name.length > 0 && email.length > 0));
+  // Email is needed even for anonymous gifts (receipt).
+  const canSubmit = !busy && value >= 1 && email.length > 0 && (anonymous || name.length > 0);
 
-  function submit() {
+  async function submit() {
     if (!canSubmit || !campaign || !church) return;
-    recordGift({
-      id: 'gift_' + Date.now(),
+    setError('');
+    const timestamp = new Date().toISOString();
+    const details = {
       campaignId: campaign.id,
       campaignTitle: campaign.title,
       churchName: church.name,
@@ -50,26 +57,46 @@ export default function GiveScreen({ route, navigation }: Props) {
       total,
       recurring,
       anonymous,
-      donor: anonymous ? null : { name, email },
-      timestamp: new Date().toISOString(),
+      timestamp,
+    };
+
+    // Live checkout: the provider's page opens in the browser and the
+    // payment server sends the donor back to burden://gift?gift=…
+    if (liveCheckout) {
+      setBusy(true);
+      try {
+        const res = await startCheckout({
+          ...details, churchId: church.id, provider, coverFee, name, email,
+        });
+        recordGift({
+          ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider,
+          status: 'initiated', events: [{ step: 'gift_sent', occurred_at: timestamp }],
+        });
+        navigation.replace('Gift', { giftId: res.giftId });
+        await Linking.openURL(res.checkoutUrl);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    // Demo checkout when no payment server is set up.
+    const id = 'gift_' + Date.now();
+    recordGift({
+      ...details, id, live: false, provider, status: 'held', holdUntil: demoHoldUntil(timestamp),
+      events: demoEvents(timestamp, 'Demo checkout — no payment processed.'),
     });
-    Alert.alert(
-      'Gift received',
-      `Thank you. Your gift of ${formatMoney(value)} is on its way to ${church.name}. A receipt will be emailed shortly.`,
-      [
-        { text: 'View giving history', onPress: () => navigation.navigate('Tabs', { screen: 'Giving' }) },
-        { text: 'Back to Discover', onPress: () => navigation.navigate('Tabs', { screen: 'Discover' }), style: 'cancel' },
-      ],
-    );
+    navigation.replace('Gift', { giftId: id });
   }
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
       <Label>Give</Label>
       <Text style={styles.h1}>Support {church.name}</Text>
-      <Text style={styles.sub}>
-        {church.location.toUpperCase()} · {campaign.title.toUpperCase()}
-      </Text>
+      <Text style={styles.sub}>{church.location.toUpperCase()}</Text>
+      <Text style={[styles.sub, { marginTop: 4 }]}>{campaign.title.toUpperCase()}</Text>
 
       <Rule soft style={{ marginVertical: 24 }} />
 
@@ -102,7 +129,9 @@ export default function GiveScreen({ route, navigation }: Props) {
           checked={recurring}
           onChange={setRecurring}
           label="Make this a monthly gift"
-          help="Cancel any time from your giving history."
+          help={liveCheckout
+            ? 'Only this first gift is charged for now — automatic monthly repeats are not switched on yet.'
+            : 'Cancel any time from your giving history.'}
         />
         <Toggle
           checked={anonymous}
@@ -118,27 +147,54 @@ export default function GiveScreen({ route, navigation }: Props) {
         />
       </View>
 
-      {!anonymous && (
-        <View style={{ marginTop: 24 }}>
-          <Label style={{ marginBottom: 12 }}>Your details</Label>
+      <View style={{ marginTop: 24 }}>
+        <Label style={{ marginBottom: 4 }}>Pay with</Label>
+        {PAYMENT_METHODS.map((m) => {
+          const selected = provider === m.id;
+          return (
+            <Pressable
+              key={m.id}
+              onPress={() => setProvider(m.id)}
+              style={styles.toggleRow}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+            >
+              <View style={[styles.radio, selected && { borderColor: colors.ink }]}>
+                {selected && <View style={styles.radioDot} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleLabel}>{m.label}</Text>
+                <Text style={styles.toggleHelp}>{m.detail}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+        <Text style={[styles.toggleHelp, { marginTop: 10 }]}>
+          You'll finish paying on the provider's secure page. BURDEN never sees your card or mobile-money PIN.
+        </Text>
+      </View>
+
+      <View style={{ marginTop: 24 }}>
+        <Label style={{ marginBottom: 12 }}>Your details</Label>
+        {!anonymous && (
           <TextInput
             placeholder="Full name"
             placeholderTextColor={colors.inkMuted}
             value={name}
             onChangeText={setName}
-            style={styles.input}
+            style={[styles.input, { marginBottom: 8 }]}
           />
-          <TextInput
-            placeholder="Email for receipt"
-            placeholderTextColor={colors.inkMuted}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-            style={[styles.input, { marginTop: 8 }]}
-          />
-        </View>
-      )}
+        )}
+        <TextInput
+          placeholder="Email for receipt"
+          placeholderTextColor={colors.inkMuted}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+          style={styles.input}
+        />
+      </View>
 
       <Rule soft style={{ marginVertical: 24 }} />
 
@@ -150,13 +206,17 @@ export default function GiveScreen({ route, navigation }: Props) {
         <Text style={styles.totalAmount}>{formatMoney(total)}</Text>
       </View>
 
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
       <Button onPress={submit} disabled={!canSubmit}>
-        Give {formatMoney(total)}
+        {busy ? 'Opening secure checkout…' : `Give ${formatMoney(total)}`}
       </Button>
 
       <Text style={styles.disclaimer}>
-        By giving you confirm you have read BURDEN's eligibility &amp; refund policy. This is a demo
-        checkout — no payment is processed.
+        By giving you confirm you have read BURDEN's eligibility & refund policy.{' '}
+        {liveCheckout
+          ? "Payments run in test mode — use the provider's test card or test mobile-money number. No real money is taken."
+          : 'This is a demo checkout — no payment is processed.'}
       </Text>
     </ScrollView>
   );
@@ -201,5 +261,11 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   totalSub: { fontFamily: font.regular, fontSize: 11, color: colors.inkMuted, marginTop: 6 },
   totalAmount: { fontFamily: font.bold, fontSize: 26, color: colors.ink },
+  radio: {
+    width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: colors.rule, marginTop: 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.ink },
+  error: { fontFamily: font.regular, fontSize: 12, color: colors.fundLow, marginBottom: 16 },
   disclaimer: { fontFamily: font.regular, fontSize: 10, lineHeight: 16, color: colors.inkMuted, marginTop: 18 },
 });

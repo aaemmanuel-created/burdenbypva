@@ -13,9 +13,11 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import { campaigns, churches, type Campaign } from '../data/mock';
-import { colors, font, formatMoney } from '../constants/theme';
-import { Badge, Label, Progress } from '../components/UI';
+import { colors, font, tile } from '../constants/theme';
+import { Badge, FundingSquare, Label, Progress, Tile } from '../components/UI';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
+import { DOCK_SPACE } from '../components/Dock';
+import { DockSurfaceCtx, useDockSurface } from '../lib/dockSurface';
 
 const CATEGORIES: ('All' | Campaign['category'])[] = ['All', 'Education', 'Health', 'Community', 'Building'];
 
@@ -26,6 +28,7 @@ type Nav = CompositeNavigationProp<
 
 export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('All');
+  const surface = useDockSurface();
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -41,15 +44,18 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
   }, [cat, query]);
 
   return (
+    <DockSurfaceCtx.Provider value={surface.ctx}>
     <FlatList
+      onScroll={surface.onScroll}
+      scrollEventThrottle={16}
       style={{ backgroundColor: colors.bg }}
       data={filtered}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 32 }}
+      contentContainerStyle={{ paddingBottom: DOCK_SPACE + 32 }}
       ListHeaderComponent={
         <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
           <Label>Discover</Label>
-          <Text style={styles.h1}>Verified churches{'\n'}and campaigns.</Text>
+          <Text style={styles.h1}>Verified burdens.</Text>
 
           <ScrollView
             horizontal
@@ -86,38 +92,41 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
         const church = churches.find((ch) => ch.id === item.churchId)!;
         const pct = Math.round((item.raised / item.goal) * 100);
         return (
-          <Pressable
+          <Tile
             onPress={() => navigation.navigate('Campaign', { campaignId: item.id })}
+            padding={20}
+            image={item.image}
+            imageColour={item.imageColour}
+            funded={item.raised / item.goal}
             style={styles.card}
           >
             <View style={styles.cardTopRow}>
-              <Label>{item.category}</Label>
-              {church.verified && <Badge tone="trust">{church.tier}</Badge>}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, flexWrap: 'wrap' }}>
+                <Badge onNavy>{item.category}</Badge>
+                {church.verified && <Badge tone="trust" onNavy>{church.tier}</Badge>}
+              </View>
+              <FundingSquare raised={item.raised} goal={item.goal} />
             </View>
+            {item.image && <View style={{ flex: 1 }} />}
 
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardChurch}>
-              {church.name.toUpperCase()} — {church.location.toUpperCase()}
+              {church.name.toUpperCase()}
+              {'\n'}<Text style={{ opacity: 0.75 }}>{church.location.toUpperCase()}</Text>
             </Text>
-            <Text style={styles.cardSummary}>{item.summary}</Text>
-
-            <View style={{ marginTop: 16 }}>
-              <Progress value={item.raised} goal={item.goal} />
+            <View style={{ marginTop: 4 }}>
+              <Progress value={item.raised} goal={item.goal} onNavy />
               <View style={styles.cardBottomRow}>
-                <Text style={styles.cardMeta}>
-                  {pct}% — {item.donors} donors
-                </Text>
+                <Text style={styles.cardMeta}>{pct}% funded</Text>
                 <Text style={styles.cardMeta}>{item.daysLeft}d left</Text>
               </View>
-              <Text style={styles.cardRaised}>
-                {formatMoney(item.raised)} raised of {formatMoney(item.goal)}
-              </Text>
             </View>
-          </Pressable>
+          </Tile>
         );
       }}
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
     />
+    </DockSurfaceCtx.Provider>
   );
 }
 
@@ -151,31 +160,26 @@ const styles = StyleSheet.create({
   },
   card: {
     marginHorizontal: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    backgroundColor: colors.bg,
   },
   cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     marginBottom: 14,
   },
   cardTitle: {
     fontFamily: font.bold,
     fontSize: 16,
-    color: colors.ink,
+    color: tile.ink,
     marginBottom: 6,
     lineHeight: 22,
   },
-  cardChurch: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: colors.inkMuted, marginBottom: 12 },
-  cardSummary: { fontFamily: font.regular, fontSize: 12, lineHeight: 18, color: colors.inkSoft },
+  cardChurch: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, lineHeight: 15, color: tile.muted, marginBottom: 12 },
   cardBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
   },
-  cardMeta: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: colors.inkSoft },
-  cardRaised: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: colors.inkMuted, marginTop: 4 },
+  cardMeta: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: tile.soft },
 });

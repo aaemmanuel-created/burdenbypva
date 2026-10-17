@@ -1,19 +1,26 @@
-import { colors, tile } from '../theme.js'
+import { colors, tile, font, type } from '../theme.js'
 import { Button, Label, Rule, Tile, formatMoney } from '../components/UI.jsx'
+import { isGiven, statusLabel } from '../lib/giftTimeline.js'
+
+const statusTone = {
+  initiated: colors.warn, held: colors.warn, paid_out: colors.trust, church_confirmed: colors.trust,
+  failed: colors.fundLow, cancelled: colors.inkMuted,
+}
 
 export default function History({ gifts, navigate }) {
-  const total = gifts.reduce((s, g) => s + g.amount, 0)
+  const given = gifts.filter(isGiven)
+  const total = given.reduce((s, g) => s + g.amount, 0)
 
   return (
     <main style={{ maxWidth: 880, margin: '0 auto', padding: '64px 28px 0' }}>
       <Label>Giving history</Label>
-      <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: -0.5, marginTop: 14, marginBottom: 36 }}>
+      <h1 style={{ fontFamily: font.serif, fontSize: type['3xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%', marginTop: 14, marginBottom: 36 }}>
         Your gifts on BURDEN.
       </h1>
 
       {gifts.length === 0 ? (
         <Tile flat as="div" padding={48} style={{ alignItems: 'center', textAlign: 'center', gap: 18 }}>
-          <p style={{ fontSize: 13, color: tile.soft, margin: 0 }}>
+          <p style={{ fontSize: 14, color: tile.soft, margin: 0 }}>
             You haven't given a gift yet. Read through a burden, see the money
             workflow in plain language, and give what you can.
           </p>
@@ -25,7 +32,7 @@ export default function History({ gifts, navigate }) {
                 background: '#fff',
                 color: colors.navyDeep,
                 border: 'none',
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: 2,
                 textTransform: 'uppercase',
                 fontWeight: 600,
@@ -40,7 +47,7 @@ export default function History({ gifts, navigate }) {
                 background: 'transparent',
                 color: '#fff',
                 border: '1px solid rgba(255,255,255,0.6)',
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: 2,
                 textTransform: 'uppercase',
                 fontWeight: 600,
@@ -64,16 +71,16 @@ export default function History({ gifts, navigate }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <Label onNavy>Gifts</Label>
-                <div style={{ fontSize: 28, fontWeight: 500, marginTop: 8, color: tile.ink }}>{gifts.length}</div>
+                <div style={{ fontSize: 28, fontWeight: 500, marginTop: 8, color: tile.ink }}>{given.length}</div>
               </div>
             </div>
-            <div style={{ fontSize: 11, letterSpacing: 1, color: tile.muted }}>
+            <div style={{ fontSize: 12, letterSpacing: 1, color: tile.muted }}>
               See where your giving has gone in your <button
                 onClick={() => navigate({ name: 'profile' })}
                 style={{
                   background: 'transparent', border: 'none', padding: 0,
                   color: '#fff', textDecoration: 'underline',
-                  fontSize: 11, letterSpacing: 1, cursor: 'pointer',
+                  fontSize: 12, letterSpacing: 1, cursor: 'pointer',
                 }}
               >profile</button>.
             </div>
@@ -85,7 +92,7 @@ export default function History({ gifts, navigate }) {
             {gifts.slice().reverse().map(g => (
               <button
                 key={g.id}
-                onClick={() => navigate({ name: 'campaign', id: g.campaignId })}
+                onClick={() => navigate({ name: 'gift', id: g.id })}
                 style={{
                   width: '100%',
                   background: 'transparent',
@@ -101,18 +108,22 @@ export default function History({ gifts, navigate }) {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{g.campaignTitle}</div>
-                  <div style={{ fontSize: 11, color: colors.inkMuted, letterSpacing: 1, marginTop: 4 }}>
-                    {g.churchName} · {new Date(g.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{g.campaignTitle || 'Gift'}</div>
+                  <div style={{ fontSize: 12, color: colors.inkMuted, letterSpacing: 1, marginTop: 4 }}>
+                    {g.churchName && `${g.churchName} · `}{g.timestamp && new Date(g.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     {g.recurring && ' · Monthly'}
                     {g.anonymous && ' · Anonymous'}
                     {g.fromCredit && ' · Paid from credit'}
                   </div>
+                  <div style={{
+                    fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 500, marginTop: 8,
+                    color: statusTone[g.status] || colors.inkMuted,
+                  }}>{statusLabel(g)} →</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 16, fontWeight: 500 }}>{formatMoney(g.amount)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 500 }}>{g.amount != null && formatMoney(g.amount)}</div>
                   {g.coveredFee > 0 && (
-                    <div style={{ fontSize: 10, color: colors.inkMuted, letterSpacing: 1, marginTop: 2 }}>
+                    <div style={{ fontSize: 12, color: colors.inkMuted, letterSpacing: 1, marginTop: 2 }}>
                       +{formatMoney(g.coveredFee)} fee covered
                     </div>
                   )}

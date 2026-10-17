@@ -1,9 +1,10 @@
-// BURDEN-native navigation: a bottom tab bar (Discover / Giving / About)
-// wrapped in a native stack so Campaign and Give push on top of the tabs.
+// BURDEN-native navigation: the floating Dock (Home / Discover / Giving /
+// About) wrapped in a native stack so Campaign, Give and Gift push on top.
 import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet } from 'react-native';
 
 import type { RootStackParamList, TabParamList } from './types';
 import { colors, font } from '../constants/theme';
@@ -15,107 +16,78 @@ import GivingScreen from '../screens/GivingScreen';
 import AboutScreen from '../screens/AboutScreen';
 import CampaignScreen from '../screens/CampaignScreen';
 import GiveScreen from '../screens/GiveScreen';
+import GiftScreen from '../screens/GiftScreen';
+import Dock from '../components/Dock';
+import { DockToneProvider } from '../lib/dockSurface';
+import { isGiven } from '../lib/giftTimeline';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-function TabBarLabel({ label, focused, badge }: { label: string; focused: boolean; badge?: number }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label.toUpperCase()}</Text>
-      {badge != null && badge > 0 && (
-        <Text style={styles.tabBadge}>({badge})</Text>
-      )}
-    </View>
-  );
-}
-
 function Tabs() {
   const { gifts } = useGifts();
+  const given = gifts.filter(isGiven).length;
   return (
+    <DockToneProvider>
     <Tab.Navigator
+      tabBar={(props) => <Dock {...props} badges={{ Giving: given }} />}
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTitleStyle: { fontFamily: font.bold, fontSize: 14, color: colors.ink },
         headerTitle: 'BURDEN',
         headerShadowVisible: false,
-        tabBarStyle: {
-          backgroundColor: colors.bg,
-          borderTopColor: colors.rule,
-          borderTopWidth: 1,
-          height: 64,
-          paddingTop: 8,
-        },
-        tabBarShowLabel: true,
-        tabBarIconStyle: { display: 'none' },
       }}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: ({ focused }) => <TabBarLabel label="Home" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Discover"
-        component={DiscoverScreen}
-        options={{
-          tabBarLabel: ({ focused }) => <TabBarLabel label="Discover" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Giving"
-        component={GivingScreen}
-        options={{
-          tabBarLabel: ({ focused }) => (
-            <TabBarLabel label="Giving" focused={focused} badge={gifts.length} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="About"
-        component={AboutScreen}
-        options={{
-          tabBarLabel: ({ focused }) => <TabBarLabel label="About" focused={focused} />,
-        }}
-      />
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Discover" component={DiscoverScreen} />
+      <Tab.Screen name="Giving" component={GivingScreen} />
+      <Tab.Screen name="About" component={AboutScreen} />
     </Tab.Navigator>
+    </DockToneProvider>
   );
 }
+
+// Our own slim header for pushed screens: a small back arrow and the title.
+// (The iOS 26 native bar wraps any back button in a large glass circle.)
+function SlimHeader({ title, onBack }: { title: string; onBack?: () => void }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[headerStyles.bar, { paddingTop: insets.top }]}>
+      <View style={headerStyles.side}>
+        {onBack && (
+          <Pressable onPress={onBack} hitSlop={14} accessibilityRole="button" accessibilityLabel="Back">
+            <Text style={headerStyles.arrow}>←</Text>
+          </Pressable>
+        )}
+      </View>
+      <Text style={headerStyles.title} numberOfLines={1}>{title}</Text>
+      <View style={headerStyles.side} />
+    </View>
+  );
+}
+
+const headerStyles = StyleSheet.create({
+  bar: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, paddingHorizontal: 16, paddingBottom: 10 },
+  side: { width: 40 },
+  arrow: { fontSize: 18, color: colors.ink, fontFamily: font.regular },
+  title: { flex: 1, textAlign: 'center', fontFamily: font.bold, fontSize: 13, color: colors.ink },
+});
 
 export function RootNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerTitleStyle: { fontFamily: font.bold, fontSize: 13, color: colors.ink },
-        headerTintColor: colors.ink,
-        headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
+        header: ({ navigation, options, back }) => (
+          <SlimHeader title={options.title ?? ''} onBack={back ? navigation.goBack : undefined} />
+        ),
       }}
     >
       <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-      <Stack.Screen name="Campaign" component={CampaignScreen} options={{ title: 'CAMPAIGN' }} />
+      <Stack.Screen name="Campaign" component={CampaignScreen} options={{ title: 'BURDEN' }} />
       <Stack.Screen name="Give" component={GiveScreen} options={{ title: 'GIVE' }} />
+      <Stack.Screen name="Gift" component={GiftScreen} options={{ title: 'YOUR GIFT' }} />
     </Stack.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
-  tabLabel: {
-    fontFamily: font.regular,
-    fontSize: 10,
-    letterSpacing: 2,
-    color: colors.inkSoft,
-  },
-  tabLabelActive: {
-    color: colors.ink,
-    fontFamily: font.bold,
-  },
-  tabBadge: {
-    fontFamily: font.regular,
-    fontSize: 9,
-    color: colors.inkMuted,
-  },
-});
