@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { colors, tile, font, type } from '../theme.js'
-import { Label, Rule, Progress, Badge, Tile, FundingBanner, formatMoney } from '../components/UI.jsx'
+import { colors, font, type } from '../theme.js'
+import { Label, Rule } from '../components/UI.jsx'
+import BurdenTile from '../components/BurdenTile.jsx'
 import { campaigns, churches } from '../data/mock.js'
 
 const CATEGORIES = ['All', 'Education', 'Health', 'Community', 'Building']
@@ -102,8 +103,8 @@ export default function Discover({ navigate }) {
   return (
     <main style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 28px 0' }}>
       <Label>Discover</Label>
-      <h1 style={{ fontFamily: font.serif, fontSize: type['3xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%', marginTop: 14, marginBottom: 36 }}>
-        Verified churches and burdens.
+      <h1 style={{ fontFamily: font.sans, fontSize: type['3xl'].fontSize, fontWeight: 400, letterSpacing: '-1%', marginTop: 14, marginBottom: 36 }}>
+        Verified burdens.
       </h1>
 
       {/* Category chips */}
@@ -213,50 +214,13 @@ export default function Discover({ navigate }) {
       }}>
         {filtered.map(c => {
           const church = churches.find(ch => ch.id === c.churchId)
-          const pct = Math.round((c.raised / c.goal) * 100)
           return (
-            <Tile
+            <BurdenTile
               key={c.id}
-              onClick={() => navigate({ name: 'campaign', id: c.id })}
-              padding={28}
-              minHeight={320}
-              style={{ gap: 18 }}
-            >
-              <FundingBanner raised={c.raised} goal={c.goal} />
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <Label onNavy>{c.category}</Label>
-                {church.verified && <Badge tone="trust" onNavy>{church.tier}</Badge>}
-              </div>
-
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.3, marginBottom: 8, color: tile.ink }}>
-                  {c.title}
-                </div>
-                <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1 }}>
-                  {church.name} — {church.location}
-                </div>
-              </div>
-
-              <p style={{ fontSize: 12, lineHeight: 1.6, color: tile.soft, flex: 1, margin: 0 }}>
-                {c.summary}
-              </p>
-
-              <div>
-                <Progress value={c.raised} goal={c.goal} onNavy />
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginTop: 10,
-                  fontSize: 12,
-                  letterSpacing: 1,
-                  color: tile.soft,
-                }}>
-                  <span>{pct}% — {c.donors} donors</span>
-                  <span>{c.daysLeft}d left</span>
-                </div>
-              </div>
-            </Tile>
+              campaign={c}
+              church={church}
+              onOpen={() => navigate({ name: 'campaign', id: c.id })}
+            />
           )
         })}
 

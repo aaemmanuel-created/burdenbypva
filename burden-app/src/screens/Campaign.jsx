@@ -1,5 +1,5 @@
 import { colors, tile, font, type } from '../theme.js'
-import { Button, Label, Rule, Progress, Badge, Tile, FundingBanner, formatMoney } from '../components/UI.jsx'
+import { Button, Label, Rule, Progress, Badge, Tile, FundingSquare, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches } from '../data/mock.js'
 
 // Burden detail. The user-facing word is "burden" — the data model still
@@ -43,36 +43,52 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
         }}
       >← Discover</button>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) 340px',
-        gap: 56,
-        alignItems: 'start',
-      }}>
+      <div className="split-2">
         {/* Left — content */}
         <div>
-          <Label>{burden.category} · Burden</Label>
-          <h1 style={{
-            fontFamily: font.serif,
-            fontSize: 'clamp(28px, 4.5vw, 40px)',
-            fontWeight: 600,
-            lineHeight: 1.2,
-            letterSpacing: '-1.5%',
-            marginTop: 14,
-            marginBottom: 18,
-          }}>{burden.title}</h1>
-
-          <div style={{
-            display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap',
-            color: colors.inkSoft, fontSize: 12, letterSpacing: 1,
-            marginBottom: 36,
-          }}>
-            <span style={{ fontWeight: 500, color: colors.ink }}>{church.name}</span>
-            <span style={{ color: colors.inkMuted }}>·</span>
-            <span>{church.location}</span>
-            <span style={{ color: colors.inkMuted }}>·</span>
+          {/* Category and trust side by side at the top, as in the app */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Badge>{burden.category}</Badge>
             {church.verified && <Badge tone="trust">{church.tier}</Badge>}
           </div>
+          <h1 style={{
+            fontFamily: font.sans,
+            fontSize: 'clamp(28px, 4.5vw, 40px)',
+            fontWeight: 400,
+            lineHeight: 1.2,
+            letterSpacing: '-1%',
+            marginTop: 16,
+            marginBottom: 16,
+          }}>{burden.title}</h1>
+
+          {/* Church, with its city and country beneath */}
+          <div style={{ marginBottom: 32, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: colors.ink }}>{church.name}</div>
+            <div style={{ fontSize: 13, color: colors.inkSoft }}>{church.location}</div>
+          </div>
+
+          <Rule soft />
+
+          {/* About — four lines at most; the detail follows below */}
+          <section style={{ padding: '32px 0' }}>
+            <Label>About this burden</Label>
+            <p style={{
+              marginTop: 14, fontSize: 14, lineHeight: 1.75, color: colors.inkSoft,
+              display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {burden.summary} Funds go straight to the church's verified payout account, with a public update every month.
+            </p>
+          </section>
+
+          <Rule soft />
+
+          {/* Profiles — the people carrying this burden */}
+          <section style={{ padding: '32px 0' }}>
+            <Label>Profiles</Label>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingTop: 16, paddingBottom: 4 }}>
+              {burden.team.map(member => <ProfileTile key={member.role} member={member} />)}
+            </div>
+          </section>
 
           <Rule soft />
 
@@ -92,30 +108,6 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
             <p style={{ marginTop: 14, fontSize: 14, lineHeight: 1.75, color: colors.inkSoft }}>
               {burden.currentState}
             </p>
-          </section>
-
-          <Rule soft />
-
-          {/* Team — who handles what */}
-          <section style={{ padding: '32px 0' }}>
-            <Label>Who handles what</Label>
-            <div style={{ marginTop: 18 }}>
-              {burden.team.map(member => (
-                <div key={member.role} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '180px 1fr',
-                  gap: 16,
-                  padding: '12px 0',
-                  borderBottom: '1px solid ' + colors.ruleSoft,
-                }}>
-                  <span style={{
-                    fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
-                    color: colors.inkMuted,
-                  }}>{member.role}</span>
-                  <span style={{ fontSize: 14, color: colors.ink }}>{member.name}</span>
-                </div>
-              ))}
-            </div>
           </section>
 
           <Rule soft />
@@ -196,9 +188,12 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
         </div>
 
         {/* Right — give panel */}
-        <aside style={{ position: 'sticky', top: 92 }}>
+        <aside>
           <Tile flat as="div" padding={24} style={{ gap: 18 }}>
-            <FundingBanner raised={burden.raised} goal={burden.goal} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Label onNavy>Funding</Label>
+              <FundingSquare raised={burden.raised} goal={burden.goal} size={18} />
+            </div>
 
             <Progress value={burden.raised} goal={burden.goal} onNavy />
 
@@ -223,23 +218,9 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
               </div>
             </div>
 
-            <button
-              onClick={() => navigate({ name: 'give', id: burden.id })}
-              style={{
-                width: '100%',
-                padding: '14px 22px',
-                background: '#fff',
-                color: colors.navyDeep,
-                border: 'none',
-                fontSize: 12,
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                borderRadius: 999,
-                cursor: 'pointer',
-                boxShadow: '0 6px 14px -6px rgba(0,0,0,0.55)',
-              }}
-            >Carry this burden — give</button>
+            <Button variant="onNavy" full onClick={() => navigate({ name: 'give', id: burden.id })}>
+              Carry this burden — give
+            </Button>
 
             <p style={{ marginTop: 4, fontSize: 12, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
               Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
@@ -249,6 +230,34 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
         </aside>
       </div>
     </main>
+  )
+}
+
+// One person on the burden's team. Their face photo fills the top; until the
+// church sends one, their initials stand in.
+function ProfileTile({ member }) {
+  const initials = member.name
+    .replace(/\(.*?\)|,.*$/g, '')
+    .split(/\s+/)
+    .filter(w => /^[A-Z]/.test(w) && !/^(Rev|Dr|Mr|Mrs|Ms|Pastor|Engr|Teacher|Auntie)\.?$/.test(w))
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+  return (
+    <Tile flat as="div" padding={0} style={{ width: 150, flex: '0 0 150px' }} ariaLabel={`${member.name}, ${member.role}`}>
+      <div style={{
+        height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(255,255,255,0.12)',
+      }}>
+        {member.photo
+          ? <img src={member.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <span style={{ fontSize: 36, fontWeight: 600, letterSpacing: 2, color: tile.ink }}>{initials || '·'}</span>}
+      </div>
+      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ fontSize: 13, lineHeight: 1.3, fontWeight: 600, color: tile.ink }}>{member.name}</div>
+        <div style={{ fontSize: 9, letterSpacing: 1, lineHeight: 1.4, textTransform: 'uppercase', color: tile.muted }}>{member.role}</div>
+      </div>
+    </Tile>
   )
 }
 

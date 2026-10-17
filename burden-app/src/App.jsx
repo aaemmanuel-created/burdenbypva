@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import Header from './components/Header.jsx'
+import Dock from './components/Dock.jsx'
 import Footer from './components/Footer.jsx'
 import Splash from './screens/Splash.jsx'
 import Home from './screens/Home.jsx'
@@ -141,14 +142,10 @@ export default function App() {
 
   return (
     <>
-      <Header
-        route={route}
-        navigate={navigate}
-        givingCount={givenGifts.length}
-        creditBalance={creditBalance}
-      />
+      <Header navigate={navigate} creditBalance={creditBalance} />
       {screen}
       <Footer />
+      <Dock route={route} navigate={navigate} givingCount={givenGifts.length} />
     </>
   )
 }

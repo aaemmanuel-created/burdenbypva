@@ -1,9 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
-// §2 — self-hosted variable fonts (no Google Fonts CDN, no FOUT).
-import '@fontsource-variable/source-serif-4'
-import '@fontsource-variable/inter'
 import App from './App.jsx'
 
 const dsn = import.meta.env.VITE_SENTRY_DSN
@@ -26,7 +23,7 @@ if (typeof window !== 'undefined' && new URLSearchParams(window.location.search)
 }
 
 const Fallback = () => (
-  <div style={{ padding: '32px', fontFamily: "'Inter Variable', 'Inter', sans-serif" }}>
+  <div style={{ padding: '32px', fontFamily: "Helvetica, 'Helvetica Neue', Arial, sans-serif" }}>
     <h1>Something went wrong.</h1>
     <p>The page hit an unexpected error. Reload to try again.</p>
   </div>

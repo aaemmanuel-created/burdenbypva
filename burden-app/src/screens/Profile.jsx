@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { colors, tile, font, type } from '../theme.js'
-import { Label, Rule, Tile, Badge, Progress, FundingBanner, formatMoney } from '../components/UI.jsx'
+import { Label, Rule, Tile, Badge, Progress, FundingSquare, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches } from '../data/mock.js'
 
 // Profile — the donor's account on BURDEN.
@@ -305,7 +305,7 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
                   minHeight={280}
                   style={{ gap: 14 }}
                 >
-                  <FundingBanner raised={campaign.raised} goal={campaign.goal} />
+                  <FundingSquare raised={campaign.raised} goal={campaign.goal} />
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <Label onNavy>You gave</Label>

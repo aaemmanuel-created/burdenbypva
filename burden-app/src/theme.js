@@ -1,11 +1,9 @@
 // BURDEN by HOUSEPVA — design tokens
 // Reverent, trustworthy, warm, plain. No religious iconography by default.
 //
-// 2026-07-02 overhaul pass (BURDEN_app_design_overhaul_prompt.md) applied
-// WITHOUT the §1 color pivot — palette remains warm paper + glassy navy.
-// Adopted: §2 typography (Source Serif 4 + Inter, 3 weights, fixed scale),
-// §3 strict 8px spacing, §4 whitespace-not-lines, §5 motion, §6 daily
-// reading, §7 haptics.
+// 2026-10-17: brought in line with the native app (burden-native/src/
+// constants/theme.ts) — Helvetica throughout, lighter blue gradient tiles,
+// amber mid-funding tone. Keep the two files in step.
 
 export const colors = {
   bg: '#f7f6f2',          // warm paper
@@ -22,43 +20,39 @@ export const colors = {
   trustOnNavy: '#7ec48a', // verified badge — bright evergreen (navy bg)
   warnOnNavy: '#e0a86b',  // pending — warm ochre (navy bg)
 
-  // Glassy navy tile palette — used for cards, tiles, surfaces that should "pop".
-  navy:        '#0b1a35',
-  navyDeep:    '#050c1d',
-  navyEdge:    '#1f3360',
-  navyInk:     '#eef2fb',   // primary text on navy
-  navySoft:    '#b9c4dc',   // secondary text on navy
-  navyMuted:   '#7a89a8',   // tertiary text on navy
+  // Blue tile palette — lightened 2026-10-17 to match the app (was #0b1a35).
+  navy:        '#3a69ad',
+  navyTop:     '#5a8bd1',   // tile gradient: light top …
+  navyBottom:  '#2d5797',   // … to deeper bottom
+  navyDeep:    '#1d3a6e',   // text on white buttons inside a tile
+  navyEdge:    '#6b95d3',
+  navyInk:     '#eef2fb',   // primary text on blue
+  navySoft:    '#e8eef9',   // secondary text on blue
+  navyMuted:   '#cfdcf2',   // tertiary text on blue
   navyRule:    'rgba(255,255,255,0.10)',
   navyHi:      'rgba(255,255,255,0.10)',  // top sheen
   navyLo:      'rgba(0,0,0,0.38)',        // bottom shadow inside tile
 
-  // Funding banner tones
+  // Funding square tones: red (under a third), amber (halfway), green (almost / fully)
   fundLow:  '#c44a3e',
-  fundMid:  '#caa14b',
+  fundMid:  '#e09a2d',
   fundHigh: '#3f8a5a',
 }
 
-// Glassy navy gradient + 3D shadow stack — used on tiles to "pop".
+// Blue gradient + soft lift — used on tiles to "pop".
 export const tile = {
-  // Diagonal navy gradient with a top sheen highlight.
   background: `
     linear-gradient(180deg, ${colors.navyHi} 0%, rgba(255,255,255,0) 38%),
-    linear-gradient(155deg, ${colors.navy} 0%, ${colors.navyDeep} 100%)
+    linear-gradient(160deg, ${colors.navyTop} 0%, ${colors.navyBottom} 100%)
   `,
   border: '1px solid ' + colors.navyEdge,
-  // Layered shadow: outer drop + raised bevel + inset top highlight + inset bottom shade.
   shadow: [
-    '0 1px 0 rgba(255,255,255,0.10) inset',
-    '0 -14px 22px rgba(0,0,0,0.28) inset',
-    '0 18px 30px -12px rgba(5,12,29,0.55)',
-    '0 6px 12px -6px rgba(5,12,29,0.45)',
+    '0 1px 0 rgba(255,255,255,0.14) inset',
+    '0 14px 24px -14px rgba(5,12,29,0.45)',
   ].join(', '),
   shadowHover: [
-    '0 1px 0 rgba(255,255,255,0.14) inset',
-    '0 -14px 22px rgba(0,0,0,0.32) inset',
-    '0 28px 44px -14px rgba(5,12,29,0.65)',
-    '0 10px 18px -8px rgba(5,12,29,0.55)',
+    '0 1px 0 rgba(255,255,255,0.18) inset',
+    '0 22px 36px -16px rgba(5,12,29,0.5)',
   ].join(', '),
   ink:    colors.navyInk,
   soft:   colors.navySoft,
@@ -66,15 +60,13 @@ export const tile = {
   rule:   colors.navyRule,
 }
 
-// Two fonts, three weights (400/500/600) — nothing else (§2).
-// Serif: wordmark, hero headline, section labels, project titles.
-// Sans: everything else.
+// Helvetica throughout, as in the app. The three keys are kept so existing
+// screens keep working; they all resolve to the same stack now.
+const helvetica = "Helvetica, 'Helvetica Neue', Arial, sans-serif"
 export const font = {
-  serif: "'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman', serif",
-  sans: "'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  // Legacy key — a few files import `font.mono`; it now resolves to the
-  // sans stack (JetBrains Mono retired per §2).
-  mono: "'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  serif: helvetica,
+  sans: helvetica,
+  mono: helvetica,
 }
 
 // Type scale (px) — §2, do not deviate.

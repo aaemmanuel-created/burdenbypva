@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { colors, tile, radius, font, type } from '../theme.js'
+import grain from '../assets/grain.png'
 
-// Small uppercase label — §2: text-xs (12px), +6% tracking, weight 500,
-// serif is reserved for display; labels stay Inter.
+// Shared UI primitives — the web twins of burden-native/src/components/UI.tsx.
+
+// Small uppercase label — text-xs (12px), +6% tracking, weight 500.
 export function Label({ children, style, onNavy }) {
   return (
     <div style={{
@@ -29,22 +31,25 @@ export function Rule({ soft = false, style }) {
   )
 }
 
+// 'onNavy' is the white rounded rectangle used inside a tile ("View burden").
 export function Button({ children, onClick, variant = 'primary', disabled, style, type: htmlType = 'button', full }) {
+  const onNavy = variant === 'onNavy'
   const base = {
     fontFamily: font.sans,
-    border: '1px solid ' + colors.rule,
+    border: onNavy ? 'none' : '1px solid ' + colors.rule,
     padding: '16px 24px',
     fontSize: type.xs.fontSize,
     lineHeight: type.xs.lineHeight,
     letterSpacing: '6%',
     textTransform: 'uppercase',
-    fontWeight: 500,
-    transition: 'background 120ms ease, color 120ms ease',
+    fontWeight: onNavy ? 600 : 500,
+    transition: 'background 120ms ease, color 120ms ease, transform 120ms ease',
     width: full ? '100%' : 'auto',
     opacity: disabled ? 0.4 : 1,
     pointerEvents: disabled ? 'none' : 'auto',
-    background: variant === 'primary' ? colors.ink : 'transparent',
-    color: variant === 'primary' ? colors.accentInk : colors.ink,
+    background: onNavy ? '#fff' : variant === 'primary' ? colors.ink : 'transparent',
+    color: onNavy ? colors.navyDeep : variant === 'primary' ? colors.accentInk : colors.ink,
+    borderRadius: onNavy ? 10 : 0,
     cursor: disabled ? 'not-allowed' : 'pointer',
     ...style,
   }
@@ -59,7 +64,7 @@ export function Progress({ value, goal, onNavy }) {
     <div style={{ width: '100%' }}>
       <div style={{
         height: 3,
-        background: onNavy ? 'rgba(255,255,255,0.10)' : colors.ruleSoft,
+        background: onNavy ? 'rgba(255,255,255,0.18)' : colors.ruleSoft,
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 2,
@@ -67,9 +72,7 @@ export function Progress({ value, goal, onNavy }) {
         <div style={{
           height: '100%',
           width: pct + '%',
-          background: onNavy
-            ? 'linear-gradient(90deg, #9fb4dc 0%, #ffffff 100%)'
-            : colors.ink,
+          background: onNavy ? '#fff' : colors.ink,
           transition: 'width 400ms cubic-bezier(0.22, 1, 0.36, 1)',
         }} />
       </div>
@@ -77,16 +80,15 @@ export function Progress({ value, goal, onNavy }) {
   )
 }
 
+// Bordered label. On a tile every badge is a white outline, as in the app.
 export function Badge({ children, tone = 'default', onNavy }) {
-  const palette = onNavy ? {
-    default: { bg: 'rgba(255,255,255,0.06)', fg: tile.ink,            border: 'rgba(255,255,255,0.20)' },
-    trust:   { bg: 'rgba(126,196,138,0.10)', fg: colors.trustOnNavy,  border: 'rgba(126,196,138,0.55)' },
-    warn:    { bg: 'rgba(224,168,107,0.10)', fg: colors.warnOnNavy,   border: 'rgba(224,168,107,0.55)' },
-  }[tone] : {
-    default: { bg: 'transparent', fg: colors.ink,    border: colors.rule },
-    trust:   { bg: 'transparent', fg: colors.trust,  border: colors.trust },
-    warn:    { bg: 'transparent', fg: colors.warn,   border: colors.warn },
-  }[tone]
+  const palette = onNavy
+    ? { bg: 'transparent', fg: tile.ink, border: 'rgba(255,255,255,0.55)' }
+    : {
+      default: { bg: 'transparent', fg: colors.ink,    border: colors.rule },
+      trust:   { bg: 'transparent', fg: colors.trust,  border: colors.trust },
+      warn:    { bg: 'transparent', fg: colors.warn,   border: colors.warn },
+    }[tone]
   return (
     <span style={{
       display: 'inline-block',
@@ -106,79 +108,15 @@ export function Badge({ children, tone = 'default', onNavy }) {
 }
 
 export function formatMoney(n, currency = 'USD') {
-  const s = new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
-  return s
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
 }
 
-// ─── Tile — glassy navy 3D card used across the app ──────────────────────────
+// ─── Funding tier + square ────────────────────────────────────────────────────
 //
-// Use this in place of a plain styled button/div whenever you want the
-// "pop-out" effect (Home grids, Discover results, Profile cards, etc.).
-// Pass `as="button"` for clickable tiles, `as="div"` for static ones.
-
-export function Tile({
-  children,
-  onClick,
-  as = 'button',
-  style,
-  padding = 24,
-  minHeight,
-  flat = false,           // disables the hover lift
-  ariaLabel,
-}) {
-  const [hover, setHover] = useState(false)
-  const Component = as
-  const base = {
-    position: 'relative',
-    background: tile.background,
-    border: tile.border,
-    boxShadow: hover && !flat ? tile.shadowHover : tile.shadow,
-    color: tile.ink,
-    padding,
-    minHeight,
-    borderRadius: radius.tile,
-    textAlign: 'left',
-    display: 'flex',
-    flexDirection: 'column',
-    width: '100%',
-    cursor: onClick ? 'pointer' : 'default',
-    transform: hover && !flat ? 'translateY(-2px)' : 'translateY(0)',
-    transition: 'transform 220ms cubic-bezier(0.22,1,0.36,1), box-shadow 220ms ease',
-    overflow: 'hidden',
-    ...style,
-  }
-  const interactive = onClick
-    ? { onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false), onFocus: () => setHover(true), onBlur: () => setHover(false), onClick }
-    : {}
-  return (
-    <Component
-      type={as === 'button' ? 'button' : undefined}
-      aria-label={ariaLabel}
-      style={base}
-      {...interactive}
-    >
-      {/* subtle inner light streak across the top edge */}
-      <span aria-hidden style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0,
-        height: 1,
-        background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0) 100%)',
-        pointerEvents: 'none',
-      }} />
-      {children}
-    </Component>
-  )
-}
-
-// ─── FundingBanner — ribbon across the top of a tile ──────────────────────────
-//
-// Three tiers, plain-spoken language. No urgency exploitation — just a
-// transparent read of where the burden stands.
-//
-//   < 33%   "Just getting started"   (low)
-//   33–66%  "Halfway home"            (mid)
-//   > 66%   "Almost funded"           (high)
-//   ≥ 100%  "Fully funded — thank you" (complete)
+//   < 33%   red    "Just getting started"
+//   33–66%  amber  "Halfway home"
+//   > 66%   green  "Almost funded"
+//   ≥ 100%  green  "Fully funded — thank you"
 
 export function fundingTier(raised, goal) {
   const pct = goal > 0 ? (raised / goal) * 100 : 0
@@ -188,41 +126,126 @@ export function fundingTier(raised, goal) {
   return            { key: 'low',      label: 'Just getting started',     color: colors.fundLow }
 }
 
-export function FundingBanner({ raised, goal, style }) {
-  const tier = fundingTier(raised, goal)
+// Small grainy rounded square in a tile's top-right corner, shaped like the
+// HOUSEPVA app icon. Colour is never the only signal: the label is read by
+// screen readers and the tile also prints "NN% funded".
+export function FundingSquare({ raised, goal, size = 16 }) {
+  const t = fundingTier(raised, goal)
   return (
-    <div style={{
-      alignSelf: 'flex-start',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '8px 16px',
-      background: `linear-gradient(180deg, ${tier.color} 0%, ${shade(tier.color, -0.18)} 100%)`,
-      color: '#fff',
-      fontFamily: font.sans,
-      fontSize: type.xs.fontSize,
-      letterSpacing: '6%',
-      textTransform: 'uppercase',
-      fontWeight: 600,
-      boxShadow: '0 4px 10px -4px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.18) inset',
-      borderRadius: 999,
-      ...style,
-    }}>
-      <span aria-hidden style={{
-        width: 6, height: 6, borderRadius: '50%',
-        background: '#fff',
-        boxShadow: '0 0 6px rgba(255,255,255,0.85)',
-      }} />
-      {tier.label}
-    </div>
+    <span
+      role="img"
+      aria-label={t.label}
+      style={{
+        display: 'inline-block', flexShrink: 0,
+        width: size, height: size, borderRadius: size * 0.28,
+        background: `url(${grain}) center / 48px 48px, ${t.color}`,
+        border: '1px solid rgba(255,255,255,0.45)',
+        boxShadow: '0 3px 5px rgba(0,0,0,0.3)',
+      }}
+    />
   )
 }
 
-// tiny helper to darken a hex by amount (-1..1) for the banner gradient bottom stop
-function shade(hex, amt) {
-  const m = hex.replace('#', '').match(/.{2}/g)
-  if (!m) return hex
-  const [r, g, b] = m.map(x => parseInt(x, 16))
-  const f = (c) => Math.max(0, Math.min(255, Math.round(c + 255 * amt)))
-  return '#' + [f(r), f(g), f(b)].map(c => c.toString(16).padStart(2, '0')).join('')
+// ─── Tile — the blue gradient card used across the app ────────────────────────
+//
+// Pass `as="button"` for clickable tiles, `as="div"` for static ones.
+// With `image`, the photo fills the whole tile at its own shape and the
+// content sits over it, darkened towards the bottom so the text stays
+// readable. Put a <div style={{ flex: 1 }} /> in the children to push the
+// lower content down onto the dark part. `imageColour` (the same photo in
+// colour) fades in on top up to the funded share — colour "loading in" as
+// the burden is funded.
+//
+// Every tile carries data-dock-dark so the floating Dock can turn its labels
+// white while one scrolls underneath it.
+
+export function Tile({
+  children,
+  onClick,
+  as = 'button',
+  style,
+  padding = 24,
+  minHeight,
+  flat = false,
+  ariaLabel,
+  image,
+  imageColour,
+  funded = 0,
+}) {
+  const [hover, setHover] = useState(false)
+  const [colourIn, setColourIn] = useState(0)
+  useEffect(() => {
+    if (!imageColour) return
+    const t = setTimeout(() => setColourIn(Math.max(0, Math.min(1, funded))), 250)
+    return () => clearTimeout(t)
+  }, [imageColour, funded])
+
+  const Component = as
+  // Layout props belong to the content layer; everything else to the box.
+  const { gap, alignItems, textAlign, ...outer } = style || {}
+  const box = {
+    position: 'relative',
+    background: tile.background,
+    border: tile.border,
+    boxShadow: hover && !flat ? tile.shadowHover : tile.shadow,
+    color: tile.ink,
+    padding,
+    minHeight,
+    aspectRatio: image ? '0.79' : undefined,
+    borderRadius: radius.tile,
+    textAlign: 'left',
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
+    boxSizing: 'border-box',
+    cursor: onClick ? 'pointer' : 'default',
+    transform: hover && !flat ? 'translateY(-2px)' : 'translateY(0)',
+    transition: 'transform 220ms cubic-bezier(0.22,1,0.36,1), box-shadow 220ms ease',
+    overflow: 'hidden',
+    fontFamily: font.sans,
+    ...outer,
+  }
+  const interactive = onClick
+    ? { onMouseEnter: () => setHover(true), onMouseLeave: () => setHover(false), onFocus: () => setHover(true), onBlur: () => setHover(false), onClick }
+    : {}
+  const photo = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }
+  return (
+    <Component
+      type={as === 'button' ? 'button' : undefined}
+      role={as !== 'button' && onClick ? 'button' : undefined}
+      tabIndex={as !== 'button' && onClick ? 0 : undefined}
+      onKeyDown={as !== 'button' && onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+      aria-label={ariaLabel}
+      data-dock-dark=""
+      style={box}
+      {...interactive}
+    >
+      {image && (
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <img src={image} alt="" style={photo} />
+          {imageColour && (
+            <img src={imageColour} alt="" style={{
+              ...photo, opacity: colourIn,
+              transition: 'opacity 1800ms cubic-bezier(0.22,1,0.36,1)',
+            }} />
+          )}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.85) 100%)',
+          }} />
+        </div>
+      )}
+      {/* light streak along the top edge */}
+      <span aria-hidden style={{
+        position: 'absolute', top: 0, left: 24, right: 24, height: 1,
+        background: 'rgba(255,255,255,0.45)', pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0,
+        gap, alignItems, textAlign,
+      }}>
+        {children}
+      </div>
+    </Component>
+  )
 }
