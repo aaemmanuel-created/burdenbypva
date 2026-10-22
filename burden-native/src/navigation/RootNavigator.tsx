@@ -1,10 +1,10 @@
-// BURDEN-native navigation: the floating Dock (Home / Discover / Giving /
-// About) wrapped in a native stack so Campaign, Give and Gift push on top.
+// BURDEN-native navigation: Apple's own tab bar (Home / Discover / Giving / About —
+// src/navigation/AppleTabs.tsx, 2026-10-22) wrapped in a native stack so Campaign, Give and
+// Gift push on top. The old hand-built floating Dock (src/components/Dock.tsx) is no longer used.
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import type { RootStackParamList, TabParamList } from './types';
 import { colors, font } from '../constants/theme';
@@ -17,31 +17,33 @@ import AboutScreen from '../screens/AboutScreen';
 import CampaignScreen from '../screens/CampaignScreen';
 import GiveScreen from '../screens/GiveScreen';
 import GiftScreen from '../screens/GiftScreen';
-import Dock from '../components/Dock';
+import { createAppleTabNavigator } from './AppleTabs';
 import { DockToneProvider } from '../lib/dockSurface';
 import { isGiven } from '../lib/giftTimeline';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator<TabParamList>();
+const Tab = createAppleTabNavigator();
+
+// Apple's SF Symbols for each tab: outline when resting, filled when selected.
+const TABS: { name: keyof TabParamList; component: React.ComponentType<any>; icon: string; on: string }[] = [
+  { name: 'Home', component: HomeScreen, icon: 'house', on: 'house.fill' },
+  { name: 'Discover', component: DiscoverScreen, icon: 'safari', on: 'safari.fill' },
+  { name: 'Giving', component: GivingScreen, icon: 'gift', on: 'gift.fill' },
+  { name: 'About', component: AboutScreen, icon: 'info.circle', on: 'info.circle.fill' },
+];
 
 function Tabs() {
   const { gifts } = useGifts();
   const given = gifts.filter(isGiven).length;
   return (
     <DockToneProvider>
-    <Tab.Navigator
-      tabBar={(props) => <Dock {...props} badges={{ Giving: given }} />}
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerTitleStyle: { fontFamily: font.bold, fontSize: 14, color: colors.ink },
-        headerTitle: 'BURDEN',
-        headerShadowVisible: false,
-      }}
-    >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Discover" component={DiscoverScreen} />
-      <Tab.Screen name="Giving" component={GivingScreen} />
-      <Tab.Screen name="About" component={AboutScreen} />
+    <Tab.Navigator tintColor={colors.ink} minimizeOnScroll>
+      {TABS.map((t) => (
+        <Tab.Screen key={t.name} name={t.name} component={t.component}
+          options={{ title: t.name, sfSymbol: t.icon, sfSymbolSelected: t.on, headerTitle: 'BURDEN',
+            // the Giving tab counts the gifts you have given, as the old dock's badge did
+            badge: t.name === 'Giving' && given > 0 ? String(given) : undefined }} />
+      ))}
     </Tab.Navigator>
     </DockToneProvider>
   );
