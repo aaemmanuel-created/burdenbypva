@@ -63,6 +63,8 @@ export type Gift = {
   live: boolean;
   testMode?: boolean;
   token?: string;
+  // paid from the donor's account credit (the BURDEN wallet) rather than a provider
+  fromCredit?: boolean;
 };
 
 export const churches: Church[] = [

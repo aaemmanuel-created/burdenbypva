@@ -66,27 +66,36 @@ export default function HomeScreen({ navigation }: { navigation: Nav }) {
       <Rule style={{ marginTop: 32 }} />
 
       <SectionTitle label="Shared Burdens" />
-      <View style={{ paddingHorizontal: 20, gap: 12 }}>
-        {shared.length === 0 ? (
+      {shared.length === 0 ? (
+        <View style={{ paddingHorizontal: 20 }}>
           <Text style={styles.emptyShared}>
             Burdens you give to will appear here, so you can follow each one.
           </Text>
-        ) : (
-          shared.map((s) => (
-            <View key={s.campaign.id} style={{ gap: 8 }}>
-              <Pressable onPress={() => navigation.navigate('Gift', { giftId: s.latestGiftId })}>
-                <Text style={styles.sharedLine}>
-                  YOU SHARED {formatMoney(s.total)} · {s.status.toUpperCase()} →
-                </Text>
-              </Pressable>
-              <ProjectCard
-                campaign={s.campaign}
-                onPress={() => navigation.navigate('Campaign', { campaignId: s.campaign.id })}
-              />
-            </View>
-          ))
-        )}
-      </View>
+        </View>
+      ) : (
+        // a row of small squares you swipe through (Emmanuel, 2026-10-22): the burden on the
+        // square opens it; the line beneath says what you shared and opens the latest gift
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={SHARED_SQ + 12}
+          decelerationRate="fast"
+          // room above and below so the squares' shadows aren't cut off by the row
+          style={{ marginVertical: -16 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 16, gap: 12 }}
+        >
+          {shared.map((s) => (
+            <SharedSquare
+              key={s.campaign.id}
+              campaign={s.campaign}
+              total={s.total}
+              status={s.status}
+              onOpen={() => navigation.navigate('Campaign', { campaignId: s.campaign.id })}
+              onGift={() => navigation.navigate('Gift', { giftId: s.latestGiftId })}
+            />
+          ))}
+        </ScrollView>
+      )}
 
       <Rule style={{ marginTop: 32 }} />
 
@@ -205,6 +214,40 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+// One shared burden as a small square: its photo, the funding square, the title and church;
+// beneath it, what you shared and where your latest gift has got to.
+const SHARED_SQ = 152;
+function SharedSquare({ campaign, total, status, onOpen, onGift }: {
+  campaign: Campaign; total: number; status: string; onOpen: () => void; onGift: () => void;
+}) {
+  const church = churches.find((c) => c.id === campaign.churchId)!;
+  return (
+    <View style={{ width: SHARED_SQ, gap: 8 }}>
+      <Tile
+        onPress={onOpen}
+        padding={12}
+        image={campaign.image}
+        imageColour={campaign.imageColour}
+        funded={campaign.raised / campaign.goal}
+        accessibilityLabel={`${campaign.title}, ${church.name}`}
+        // square: aspectRatio 1 overrides the photo's own shape, which Tile otherwise keeps
+        style={{ width: SHARED_SQ, height: SHARED_SQ, aspectRatio: 1 }}
+      >
+        <View style={{ alignItems: 'flex-end' }}>
+          <FundingSquare raised={campaign.raised} goal={campaign.goal} size={14} />
+        </View>
+        <View style={{ flex: 1 }} />
+        <Text style={styles.sqTitle} numberOfLines={2}>{campaign.title}</Text>
+        <Text style={styles.sqChurch} numberOfLines={1}>{church.name.toUpperCase()}</Text>
+      </Tile>
+      <Pressable onPress={onGift} accessibilityRole="button" hitSlop={6}>
+        <Text style={styles.sharedLine} numberOfLines={2}>
+          YOU SHARED {formatMoney(total)} · {status.toUpperCase()} →
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
 function ProjectCard({ campaign, onPress }: { campaign: Campaign; onPress: () => void }) {
   const church = churches.find((c) => c.id === campaign.churchId)!;
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
@@ -285,6 +328,8 @@ const styles = StyleSheet.create({
   },
   emptyShared: { fontFamily: font.regular, fontSize: 13, lineHeight: 20, color: colors.inkSoft },
   sharedLine: { fontFamily: font.bold, fontSize: 10, letterSpacing: 1.5, color: colors.inkSoft },
+  sqTitle: { fontFamily: font.bold, fontSize: 13, lineHeight: 16, color: tile.ink },
+  sqChurch: { fontFamily: font.regular, fontSize: 8.5, letterSpacing: 1, color: tile.soft, marginTop: 4 },
   tileTopLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, flexWrap: 'wrap' },
   sectionTitle: {
     paddingHorizontal: 20,
