@@ -31,7 +31,17 @@ Deno.serve(async (req) => {
   if (error) return json({ error: 'Could not load the timeline.' }, 500);
 
   const g = gift!;
+  // A monthly gift's plan: whether it's running and when the next month is.
+  let plan = null;
+  if (g.plan_id) {
+    const { data } = await db.from('recurring_plans').select('id, status, status_note, method, next_charge_at')
+      .eq('id', g.plan_id).maybeSingle();
+    if (data) {
+      plan = { id: data.id, status: data.status, note: data.status_note, method: data.method, nextChargeAt: data.next_charge_at };
+    }
+  }
   return json({
+    plan,
     gift: {
       id: g.id,
       status: g.status,
@@ -49,6 +59,7 @@ Deno.serve(async (req) => {
       recurring: g.recurring,
       anonymous: g.anonymous,
       timestamp: g.created_at,
+      payoutTo: g.payout_to ?? null,
     },
     events,
   });

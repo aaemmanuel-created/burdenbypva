@@ -24,3 +24,28 @@ verify_jwt = false
 
 [functions.church-confirm]
 verify_jwt = false
+
+# Added 2026-10-22: mobile money approve-on-phone, monthly gifts, payouts, USSD.
+# momo-otp / cancel-recurring check the gift or plan token; run-recurring and
+# run-payouts check CRON_SECRET; church-payout-account checks CHURCH_ADMIN_KEY;
+# ussd checks USSD_SHARED_SECRET.
+[functions.momo-charge]
+verify_jwt = false
+
+[functions.momo-otp]
+verify_jwt = false
+
+[functions.cancel-recurring]
+verify_jwt = false
+
+[functions.run-recurring]
+verify_jwt = false
+
+[functions.run-payouts]
+verify_jwt = false
+
+[functions.church-payout-account]
+verify_jwt = false
+
+[functions.ussd]
+verify_jwt = false

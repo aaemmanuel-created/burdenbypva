@@ -6,6 +6,7 @@
 import { parseWebhook, stripeWebhookVerification } from './providers.ts';
 import type { Provider } from './gift-input.ts';
 import { applyVerification, loadGift, secrets, verifyAndApply } from './server.ts';
+import { recordStripeCycle } from './plans.ts';
 
 export async function handleWebhook(provider: Provider, req: Request): Promise<Response> {
   if (req.method !== 'POST') return new Response('Use POST.', { status: 405 });
@@ -19,6 +20,17 @@ export async function handleWebhook(provider: Provider, req: Request): Promise<R
     return new Response('Not configured.', { status: 500 });
   }
   if (!event.valid) return new Response('Bad signature.', { status: 401 });
+
+  // A later month of a Stripe monthly gift: Stripe charged it itself.
+  if (event.stripeCycle) {
+    try {
+      await recordStripeCycle(event.stripeCycle);
+    } catch (e) {
+      console.error('stripe monthly gift not recorded', e);
+      return new Response('Retry later.', { status: 500 });
+    }
+    return new Response('ok', { status: 200 });
+  }
 
   // Events for things that aren't BURDEN gifts: acknowledge and ignore.
   const gift = event.giftId ? await loadGift(event.giftId) : null;
