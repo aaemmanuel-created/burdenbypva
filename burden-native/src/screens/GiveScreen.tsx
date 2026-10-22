@@ -17,13 +17,14 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Give'>;
 export default function GiveScreen({ route, navigation }: Props) {
   const campaign = campaigns.find((c) => c.id === route.params.campaignId);
   const church = campaign && churches.find((ch) => ch.id === campaign.churchId);
-  const { recordGift } = useGifts();
+  const { recordGift, creditBalance: credit } = useGifts();
 
   const [amount, setAmount] = useState<number>(25);
   const [custom, setCustom] = useState<string>('');
   const [recurring, setRecurring] = useState<boolean>(false);
   const [anonymous, setAnonymous] = useState<boolean>(false);
   const [coverFee, setCoverFee] = useState<boolean>(true);
+  const [useCredit, setUseCredit] = useState<boolean>(false);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [provider, setProvider] = useState<ProviderId>('stripe');
@@ -41,8 +42,9 @@ export default function GiveScreen({ route, navigation }: Props) {
   const value = custom !== '' ? Number(custom) || 0 : amount;
   const fee = coverFee ? Math.round((value * 0.045 + 0.3) * 100) / 100 : 0;
   const total = Math.round((value + fee) * 100) / 100;
+  const creditCovers = useCredit && credit >= value && value >= 1;
   // Email is needed even for anonymous gifts (receipt).
-  const canSubmit = !busy && value >= 1 && email.length > 0 && (anonymous || name.length > 0);
+  const canSubmit = !busy && value >= 1 && email.length > 0 && (anonymous || name.length > 0) && !(useCredit && value > credit);
 
   async function submit() {
     if (!canSubmit || !campaign || !church) return;
@@ -53,8 +55,8 @@ export default function GiveScreen({ route, navigation }: Props) {
       campaignTitle: campaign.title,
       churchName: church.name,
       amount: value,
-      coveredFee: fee,
-      total,
+      coveredFee: creditCovers ? 0 : fee,
+      total: creditCovers ? value : total,
       recurring,
       anonymous,
       timestamp,
@@ -62,7 +64,7 @@ export default function GiveScreen({ route, navigation }: Props) {
 
     // Live checkout: the provider's page opens in the browser and the
     // payment server sends the donor back to burden://gift?gift=…
-    if (liveCheckout) {
+    if (liveCheckout && !creditCovers) {
       setBusy(true);
       try {
         const res = await startCheckout({
@@ -82,11 +84,12 @@ export default function GiveScreen({ route, navigation }: Props) {
       return;
     }
 
-    // Demo checkout when no payment server is set up.
+    // Account credit, or the demo checkout when no payment server is set up.
     const id = 'gift_' + Date.now();
     recordGift({
-      ...details, id, live: false, provider, status: 'held', holdUntil: demoHoldUntil(timestamp),
-      events: demoEvents(timestamp, 'Demo checkout — no payment processed.'),
+      ...details, id, live: false, fromCredit: creditCovers, provider: creditCovers ? 'credit' : provider,
+      status: 'held', holdUntil: demoHoldUntil(timestamp),
+      events: demoEvents(timestamp, creditCovers ? 'Paid from your account credit.' : 'Demo checkout — no payment processed.'),
     });
     navigation.replace('Gift', { giftId: id });
   }
@@ -125,6 +128,20 @@ export default function GiveScreen({ route, navigation }: Props) {
       />
 
       <View style={{ marginTop: 24 }}>
+        {credit > 0 && (
+          <Toggle
+            checked={useCredit}
+            onChange={(v) => {
+              setUseCredit(v);
+              // covering a fee from a card while paying from credit is confusing
+              if (v) setCoverFee(false);
+            }}
+            label={`Pay from account credit (${formatMoney(credit)} available)`}
+            help={value > credit
+              ? `Gift is ${formatMoney(value)} — only ${formatMoney(credit)} in credit. Reduce the amount or top up to use credit.`
+              : 'Your account credit is held in BURDEN escrow. Switch off to pay by card instead.'}
+          />
+        )}
         <Toggle
           checked={recurring}
           onChange={setRecurring}
@@ -147,6 +164,8 @@ export default function GiveScreen({ route, navigation }: Props) {
         />
       </View>
 
+      {/* paying from credit needs no provider — the web hides this too */}
+      {!creditCovers && (
       <View style={{ marginTop: 24 }}>
         <Label style={{ marginBottom: 4 }}>Pay with</Label>
         {PAYMENT_METHODS.map((m) => {
@@ -173,6 +192,7 @@ export default function GiveScreen({ route, navigation }: Props) {
           You'll finish paying on the provider's secure page. BURDEN never sees your card or mobile-money PIN.
         </Text>
       </View>
+      )}
 
       <View style={{ marginTop: 24 }}>
         <Label style={{ marginBottom: 12 }}>Your details</Label>
@@ -201,15 +221,15 @@ export default function GiveScreen({ route, navigation }: Props) {
       <View style={styles.totalRow}>
         <View>
           <Label>Total today</Label>
-          <Text style={styles.totalSub}>{recurring ? 'and monthly thereafter' : 'one-time gift'}</Text>
+          <Text style={styles.totalSub}>{creditCovers ? 'paid from account credit' : recurring ? 'and monthly thereafter' : 'one-time gift'}</Text>
         </View>
-        <Text style={styles.totalAmount}>{formatMoney(total)}</Text>
+        <Text style={styles.totalAmount}>{formatMoney(creditCovers ? value : total)}</Text>
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Button onPress={submit} disabled={!canSubmit}>
-        {busy ? 'Opening secure checkout…' : `Give ${formatMoney(total)}`}
+        {busy ? 'Opening secure checkout…' : creditCovers ? `Give ${formatMoney(value)} from credit` : `Give ${formatMoney(total)}`}
       </Button>
 
       <Text style={styles.disclaimer}>

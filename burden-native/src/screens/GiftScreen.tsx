@@ -90,7 +90,7 @@ export default function GiftScreen({ route, navigation }: Props) {
         </Text>
       ) : null}
       <Text style={[styles.sub, { marginTop: 4 }]}>
-        {gift.live && method ? method.detail.split('.')[0] : 'Demo checkout'}
+        {gift.fromCredit ? 'Paid from account credit' : gift.live && method ? method.detail.split('.')[0] : 'Demo checkout'}
         {gift.testMode || !gift.live ? ' · Test only — no real money moved' : ''}
       </Text>
 

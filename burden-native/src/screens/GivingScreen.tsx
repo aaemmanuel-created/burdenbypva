@@ -85,6 +85,7 @@ export default function GivingScreen({ navigation }: { navigation: Nav }) {
               }).toUpperCase()}
               {item.recurring ? ' · MONTHLY' : ''}
               {item.anonymous ? ' · ANONYMOUS' : ''}
+              {item.fromCredit ? ' · PAID FROM CREDIT' : ''}
             </Text>
             <Text style={[styles.giftStatus, { color: statusTone[item.status] ?? colors.inkMuted }]}>
               {statusLabel(item).toUpperCase()} →

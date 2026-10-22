@@ -1,4 +1,4 @@
-// BURDEN-native navigation: Apple's own tab bar (Home / Discover / Giving / About —
+// BURDEN-native navigation: Apple's own tab bar (Home / Discover / Giving / Wallet / About —
 // src/navigation/AppleTabs.tsx, 2026-10-22) wrapped in a native stack so Campaign, Give and
 // Gift push on top. The old hand-built floating Dock (src/components/Dock.tsx) is no longer used.
 import React from 'react';
@@ -14,6 +14,7 @@ import HomeScreen from '../screens/HomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import GivingScreen from '../screens/GivingScreen';
 import AboutScreen from '../screens/AboutScreen';
+import WalletScreen from '../screens/WalletScreen';
 import CampaignScreen from '../screens/CampaignScreen';
 import GiveScreen from '../screens/GiveScreen';
 import GiftScreen from '../screens/GiftScreen';
@@ -29,6 +30,8 @@ const TABS: { name: keyof TabParamList; component: React.ComponentType<any>; ico
   { name: 'Home', component: HomeScreen, icon: 'house', on: 'house.fill' },
   { name: 'Discover', component: DiscoverScreen, icon: 'safari', on: 'safari.fill' },
   { name: 'Giving', component: GivingScreen, icon: 'gift', on: 'gift.fill' },
+  // the BURDEN wallet — account credit, before About (Emmanuel, 2026-10-22)
+  { name: 'Wallet', component: WalletScreen, icon: 'wallet.bifold', on: 'wallet.bifold.fill' },
   { name: 'About', component: AboutScreen, icon: 'info.circle', on: 'info.circle.fill' },
 ];
 
