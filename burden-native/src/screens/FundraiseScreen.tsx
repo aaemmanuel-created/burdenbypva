@@ -65,7 +65,10 @@ export default function FundraiseScreen({ route, navigation }: Props) {
           towards your {formatMoney(made.goal)} goal.
         </Text>
         <Rule soft style={{ marginVertical: 24 }} />
-        <ShareOptions campaign={campaign} church={church} fundraiser={made} />
+        <ShareOptions
+          campaign={campaign} church={church} fundraiser={made}
+          onPoster={() => navigation.navigate('Poster', { campaignId: campaign.id, fundraiserId: made.id })}
+        />
         <Text style={styles.help}>
           For now your fundraiser is kept on this phone only, so the link opens the burden for others but they
           won't see your page yet.

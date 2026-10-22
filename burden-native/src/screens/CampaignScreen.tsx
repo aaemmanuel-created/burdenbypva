@@ -183,6 +183,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
         church={church}
         fundraiser={sharedFundraiser}
         onFundraise={() => navigation.navigate('Fundraise', { campaignId: campaign.id })}
+        onPoster={() => navigation.navigate('Poster', { campaignId: campaign.id, fundraiserId: sharedFundraiser?.id })}
       />
     </ScrollView>
   );

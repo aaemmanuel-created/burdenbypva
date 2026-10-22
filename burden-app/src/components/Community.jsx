@@ -119,7 +119,7 @@ export function FundraisersSection({ fundraisers, highlightId, onGiveThrough, on
 }
 
 // Copy link, WhatsApp, Email, and the device's own share menu where there is one.
-export function ShareOptions({ campaign, church, fundraiser }) {
+export function ShareOptions({ campaign, church, fundraiser, onPoster }) {
   const url = shareUrl(campaign.id, fundraiser?.id)
   const text = shareText(campaign, church, fundraiser)
   const [copied, setCopied] = useState(false)
@@ -163,13 +163,18 @@ export function ShareOptions({ campaign, church, fundraiser }) {
             More options <span aria-hidden>→</span>
           </button>
         )}
+        {onPoster && (
+          <button style={row} onClick={onPoster}>
+            QR poster for church <span aria-hidden>→</span>
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
 // A sheet over the page, as GoFundMe's "Quick share", in BURDEN's paper and hairlines.
-export function ShareSheet({ open, onClose, campaign, church, fundraiser, onFundraise }) {
+export function ShareSheet({ open, onClose, campaign, church, fundraiser, onFundraise, onPoster }) {
   useEffect(() => {
     if (!open) return
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -193,7 +198,7 @@ export function ShareSheet({ open, onClose, campaign, church, fundraiser, onFund
             background: 'transparent', border: 'none', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: colors.ink,
           }}>×</button>
         </div>
-        <ShareOptions campaign={campaign} church={church} fundraiser={fundraiser} />
+        <ShareOptions campaign={campaign} church={church} fundraiser={fundraiser} onPoster={onPoster} />
         {onFundraise && (
           <div style={{ marginTop: 28 }}>
             <Label>Carry it further</Label>

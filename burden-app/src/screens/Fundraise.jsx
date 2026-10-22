@@ -64,7 +64,10 @@ export default function Fundraise({ id, navigate, profile, addFundraiser }) {
           Share your link below. Gifts through it go straight to {church.name}'s verified account and
           count towards your {formatMoney(made.goal)} goal.
         </p>
-        <ShareOptions campaign={campaign} church={church} fundraiser={made} />
+        <ShareOptions
+          campaign={campaign} church={church} fundraiser={made}
+          onPoster={() => navigate({ name: 'poster', id: campaign.id, fundraiserId: made.id })}
+        />
         <p style={{ marginTop: 16, fontSize: 11, lineHeight: 1.6, color: colors.inkMuted }}>
           For now your fundraiser is kept on this device only, so the link opens the burden for others
           but they won't see your page yet.

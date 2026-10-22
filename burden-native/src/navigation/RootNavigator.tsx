@@ -19,6 +19,7 @@ import CampaignScreen from '../screens/CampaignScreen';
 import GiveScreen from '../screens/GiveScreen';
 import GiftScreen from '../screens/GiftScreen';
 import FundraiseScreen from '../screens/FundraiseScreen';
+import PosterScreen from '../screens/PosterScreen';
 import { createAppleTabNavigator } from './AppleTabs';
 import { DockToneProvider } from '../lib/dockSurface';
 import { isGiven } from '../lib/giftTimeline';
@@ -96,6 +97,7 @@ export function RootNavigator() {
       <Stack.Screen name="Give" component={GiveScreen} options={{ title: 'GIVE' }} />
       <Stack.Screen name="Gift" component={GiftScreen} options={{ title: 'YOUR GIFT' }} />
       <Stack.Screen name="Fundraise" component={FundraiseScreen} options={{ title: 'FUNDRAISE' }} />
+      <Stack.Screen name="Poster" component={PosterScreen} options={{ title: 'QR CODE' }} />
     </Stack.Navigator>
   );
 }

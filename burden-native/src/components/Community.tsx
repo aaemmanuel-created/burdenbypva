@@ -120,13 +120,16 @@ export function FundraisersSection({
 }
 
 // The link, the phone's own share menu (which also copies), WhatsApp and Email.
-export function ShareOptions({ campaign, church, fundraiser }: { campaign: Campaign; church: Church; fundraiser?: Fundraiser | null }) {
+export function ShareOptions({
+  campaign, church, fundraiser, onPoster,
+}: { campaign: Campaign; church: Church; fundraiser?: Fundraiser | null; onPoster?: () => void }) {
   const url = shareUrl(campaign.id, fundraiser?.id);
   const text = shareText(campaign, church, fundraiser);
   const rows: { label: string; onPress: () => void }[] = [
     { label: 'Share or copy link', onPress: () => { Share.share({ message: `${text} ${url}`, url, title: campaign.title }).catch(() => {}); } },
     { label: 'WhatsApp', onPress: () => { Linking.openURL('whatsapp://send?text=' + encodeURIComponent(`${text} ${url}`)).catch(() => Linking.openURL('https://wa.me/?text=' + encodeURIComponent(`${text} ${url}`))); } },
     { label: 'Email', onPress: () => { Linking.openURL('mailto:?subject=' + encodeURIComponent(campaign.title) + '&body=' + encodeURIComponent(`${text}\n\n${url}`)).catch(() => {}); } },
+    ...(onPoster ? [{ label: 'QR code for church', onPress: onPoster }] : []),
   ];
   return (
     <View>
@@ -148,10 +151,10 @@ export function ShareOptions({ campaign, church, fundraiser }: { campaign: Campa
 
 // A sheet over the page, as GoFundMe's "Quick share", in BURDEN's paper and hairlines.
 export function ShareSheet({
-  open, onClose, campaign, church, fundraiser, onFundraise,
+  open, onClose, campaign, church, fundraiser, onFundraise, onPoster,
 }: {
   open: boolean; onClose: () => void; campaign: Campaign; church: Church;
-  fundraiser?: Fundraiser | null; onFundraise?: () => void;
+  fundraiser?: Fundraiser | null; onFundraise?: () => void; onPoster?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   return (
@@ -164,7 +167,10 @@ export function ShareSheet({
             <Text style={styles.close}>×</Text>
           </Pressable>
         </View>
-        <ShareOptions campaign={campaign} church={church} fundraiser={fundraiser} />
+        <ShareOptions
+          campaign={campaign} church={church} fundraiser={fundraiser}
+          onPoster={onPoster ? () => { onClose(); onPoster(); } : undefined}
+        />
         {onFundraise && (
           <View style={{ marginTop: 24 }}>
             <Label>Carry it further</Label>

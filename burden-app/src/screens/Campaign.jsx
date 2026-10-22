@@ -282,6 +282,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
         church={church}
         fundraiser={sharedFundraiser}
         onFundraise={() => navigate({ name: 'fundraise', id: burden.id })}
+        onPoster={() => navigate({ name: 'poster', id: burden.id, fundraiserId: sharedFundraiser?.id })}
       />
     </main>
   )

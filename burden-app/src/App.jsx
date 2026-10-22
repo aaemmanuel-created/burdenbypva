@@ -12,6 +12,7 @@ import Profile from './screens/Profile.jsx'
 import About from './screens/About.jsx'
 import GiftDetail from './screens/GiftDetail.jsx'
 import Fundraise from './screens/Fundraise.jsx'
+import Poster from './screens/Poster.jsx'
 import { takeCheckoutReturn } from './lib/payments.js'
 import { isGiven, settleDemoGift } from './lib/giftTimeline.js'
 import { takeShareLink } from './lib/community.js'
@@ -160,6 +161,9 @@ export default function App() {
         profile={profile}
         addFundraiser={addFundraiser}
       />
+    ); break
+    case 'poster':   screen = (
+      <Poster id={route.id} navigate={navigate} fundraisers={fundraisers} fundraiserId={route.fundraiserId} />
     ); break
     case 'history':  screen = <History gifts={gifts} navigate={navigate} />; break
     case 'gift':     screen = (
