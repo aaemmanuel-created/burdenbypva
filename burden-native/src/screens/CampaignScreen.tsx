@@ -1,10 +1,13 @@
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { campaigns, churches, type TeamMember } from '../data/mock';
 import { Badge, Button, FundingSquare, Label, Progress, Rule, Tile } from '../components/UI';
+import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '../components/Community';
 import { colors, font, formatMoney, tile } from '../constants/theme';
+import { useGifts } from '../context/GiftsContext';
+import { findFundraiser, fundraisersFor, supportFor, updatesFor } from '../lib/community';
 import type { RootStackParamList } from '../navigation/types';
 
 const ITEMS = [
@@ -17,6 +20,10 @@ const ITEMS = [
 type Props = NativeStackScreenProps<RootStackParamList, 'Campaign'>;
 
 export default function CampaignScreen({ route, navigation }: Props) {
+  const { gifts, fundraisers } = useGifts();
+  const [sharing, setSharing] = useState(false);
+  const scroll = useRef<ScrollView>(null);
+  const { fundraiserId } = route.params;
   const campaign = campaigns.find((c) => c.id === route.params.campaignId);
   if (!campaign) {
     return (
@@ -27,9 +34,13 @@ export default function CampaignScreen({ route, navigation }: Props) {
   }
   const church = churches.find((ch) => ch.id === campaign.churchId)!;
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
+  const updates = updatesFor(campaign.id);
+  const words = supportFor(campaign.id, gifts);
+  const carrying = fundraisersFor(campaign.id, fundraisers, gifts);
+  const sharedFundraiser = findFundraiser(fundraiserId, fundraisers);
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 96 }}>
+    <ScrollView ref={scroll} style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 96 }}>
       <View style={{ padding: 20 }}>
         <View style={styles.badgeRow}>
           <Badge>{campaign.category}</Badge>
@@ -62,9 +73,18 @@ export default function CampaignScreen({ route, navigation }: Props) {
               <Text style={styles.giveSub}>donors</Text>
             </View>
           </View>
-          <Button variant="onNavy" onPress={() => navigation.navigate('Give', { campaignId: campaign.id })}>
-            Carry this burden — give
+          <Button variant="onNavy" onPress={() => navigation.navigate('Give', { campaignId: campaign.id, fundraiserId: sharedFundraiser?.id })}>
+            {sharedFundraiser
+              ? `Give through ${sharedFundraiser.own ? 'your page' : sharedFundraiser.name.split(' ')[0]}`
+              : 'Carry this burden — give'}
           </Button>
+          <Pressable
+            onPress={() => setSharing(true)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.shareBtnText}>SHARE</Text>
+          </Pressable>
           <Text style={styles.giveNote}>
             Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
             Anonymous and recurring options available at checkout.
@@ -83,6 +103,13 @@ export default function CampaignScreen({ route, navigation }: Props) {
         </Text>
       </View>
 
+      <Rule soft />
+
+      {/* Updates — dated posts from the team */}
+      <View style={{ padding: 20 }}>
+        <UpdatesSection updates={updates} />
+      </View>
+
       {campaign.team && campaign.team.length > 0 && (
         <>
           <Rule soft />
@@ -98,6 +125,29 @@ export default function CampaignScreen({ route, navigation }: Props) {
           </View>
         </>
       )}
+
+      <Rule soft />
+
+      {/* Words of support — from givers, never with the amount */}
+      <View style={{ padding: 20 }}>
+        <SupportSection words={words} onGive={() => navigation.navigate('Give', { campaignId: campaign.id })} />
+      </View>
+
+      <Rule soft />
+
+      {/* Fundraisers — people carrying it with their own circle. A shared
+          fundraiser link lands here. */}
+      <View
+        style={{ padding: 20 }}
+        onLayout={(e) => { if (fundraiserId) scroll.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 120), animated: false }); }}
+      >
+        <FundraisersSection
+          fundraisers={carrying}
+          highlightId={fundraiserId}
+          onGiveThrough={(f) => navigation.navigate('Give', { campaignId: campaign.id, fundraiserId: f.id })}
+          onStart={() => navigation.navigate('Fundraise', { campaignId: campaign.id })}
+        />
+      </View>
 
       <Rule soft />
 
@@ -125,6 +175,15 @@ export default function CampaignScreen({ route, navigation }: Props) {
           {church.summary} Founded {church.founded}. {church.tradition}. Led by {church.leadership}.
         </Text>
       </View>
+
+      <ShareSheet
+        open={sharing}
+        onClose={() => setSharing(false)}
+        campaign={campaign}
+        church={church}
+        fundraiser={sharedFundraiser}
+        onFundraise={() => navigation.navigate('Fundraise', { campaignId: campaign.id })}
+      />
     </ScrollView>
   );
 }
@@ -185,6 +244,11 @@ const styles = StyleSheet.create({
   giveSub: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: tile.muted, marginTop: 2 },
   giveCount: { fontFamily: font.bold, fontSize: 16, color: tile.ink },
   giveNote: { fontFamily: font.regular, fontSize: 10, lineHeight: 16, color: tile.muted, marginTop: 16 },
+  shareBtn: {
+    marginTop: 10, paddingVertical: 14, borderRadius: 10, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.55)',
+  },
+  shareBtnText: { fontFamily: font.bold, fontSize: 12, letterSpacing: 1, color: tile.ink },
   body: { fontFamily: font.regular, fontSize: 13, lineHeight: 22, color: colors.inkSoft, marginTop: 12 },
   itemRow: {
     flexDirection: 'row',

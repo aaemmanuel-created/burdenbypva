@@ -6,12 +6,17 @@ import { campaigns, churches } from '../data/mock.js'
 import Timeline from '../components/Timeline.jsx'
 import { PAYMENT_METHODS, liveCheckout, returnUrl, startCheckout } from '../lib/payments.js'
 import { demoEvents, demoHoldUntil } from '../lib/giftTimeline.js'
+import { MESSAGE_MAX, findFundraiser } from '../lib/community.js'
+import { ShareSheet } from '../components/Community.jsx'
 
 const PRESETS = [5, 25, 100, 500]
 
-export default function Give({ id, navigate, recordGift, profile }) {
+export default function Give({ id, navigate, recordGift, profile, fundraisers = [], fundraiserId }) {
   const campaign = campaigns.find(c => c.id === id)
   const church = campaign && churches.find(ch => ch.id === campaign.churchId)
+  const fundraiser = findFundraiser(fundraiserId, fundraisers)
+  const [message, setMessage] = useState('')
+  const [sharing, setSharing] = useState(false)
 
   const [amount, setAmount] = useState(25)
   const [custom, setCustom] = useState('')
@@ -50,6 +55,11 @@ export default function Give({ id, navigate, recordGift, profile }) {
     total: creditCovers ? value : total,
     recurring,
     anonymous,
+    // shown on the burden page under Words of support, never with the amount
+    message: message.trim() || undefined,
+    donorName: anonymous ? undefined : name.trim(),
+    fundraiserId: fundraiser?.id,
+    fundraiserName: fundraiser?.name,
   }
 
   async function handleSubmit(e) {
@@ -117,8 +127,17 @@ export default function Give({ id, navigate, recordGift, profile }) {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button onClick={() => navigate({ name: 'gift', id: submitted.id })}>Track this gift</Button>
+          <Button variant="ghost" onClick={() => setSharing(true)}>Share this burden</Button>
           <Button variant="ghost" onClick={() => navigate({ name: 'discover' })}>Back to Discover</Button>
         </div>
+        <ShareSheet
+          open={sharing}
+          onClose={() => setSharing(false)}
+          campaign={campaign}
+          church={church}
+          fundraiser={fundraiser}
+          onFundraise={() => navigate({ name: 'fundraise', id: campaign.id })}
+        />
       </main>
     )
   }
@@ -146,6 +165,12 @@ export default function Give({ id, navigate, recordGift, profile }) {
       <div style={{ fontSize: type.xs.fontSize, color: colors.inkMuted, letterSpacing: '6%', marginBottom: 32 }}>
         {church.location} · {campaign.title}
       </div>
+      {fundraiser && (
+        <p style={{ fontSize: 13, color: colors.ink, lineHeight: 1.6 }}>
+          Through {fundraiser.own ? 'your fundraiser' : `${fundraiser.name}'s fundraiser`}. The gift still goes
+          straight to {church.name}'s verified account.
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} style={{ marginTop: 48 }}>
         {/* Amount */}
@@ -270,6 +295,22 @@ export default function Give({ id, navigate, recordGift, profile }) {
             required
             style={inputStyle}
           />
+        </div>
+
+        {/* Words of support — optional, shown without the amount */}
+        <div style={{ marginBottom: 36 }}>
+          <Label style={{ marginBottom: 14 }}>Words of support (optional)</Label>
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value.slice(0, MESSAGE_MAX))}
+            placeholder="A few words or a prayer for the church and the people this burden serves."
+            rows={3}
+            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+          />
+          <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11, color: colors.inkMuted, lineHeight: 1.5 }}>
+            <span>Shown on the burden page {anonymous ? 'as Anonymous' : 'with your name'}. Your amount is never shown.</span>
+            <span>{message.length}/{MESSAGE_MAX}</span>
+          </div>
         </div>
 
         {/* Summary */}

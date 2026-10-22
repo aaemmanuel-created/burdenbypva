@@ -11,7 +11,9 @@ import { colors, font, formatMoney } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
 import { PAYMENT_METHODS, fetchGiftStatus, liveCheckout } from '../lib/payments';
 import { settleDemoGift } from '../lib/giftTimeline';
-import type { GiftStatus } from '../data/mock';
+import { campaigns, churches, type GiftStatus } from '../data/mock';
+import { ShareSheet } from '../components/Community';
+import { findFundraiser } from '../lib/community';
 import type { RootStackParamList } from '../navigation/types';
 
 const POLL_MS = 4000;
@@ -20,11 +22,12 @@ const POLL_FOR_MS = 3 * 60_000;
 type Props = NativeStackScreenProps<RootStackParamList, 'Gift'>;
 
 export default function GiftScreen({ route, navigation }: Props) {
-  const { gifts, recordGift, updateGift } = useGifts();
+  const { gifts, recordGift, updateGift, fundraisers } = useGifts();
   const id = route.params.giftId ?? route.params.gift ?? '';
   const returnToken = route.params.t;
   const stored = gifts.find((g) => g.id === id);
   const [error, setError] = useState('');
+  const [sharing, setSharing] = useState(false);
 
   // Arrived from checkout for a gift this session hasn't seen: keep a stub
   // so the server can fill in the rest.
@@ -74,6 +77,8 @@ export default function GiftScreen({ route, navigation }: Props) {
   const gift = settleDemoGift(stored);
   const method = PAYMENT_METHODS.find((m) => m.id === gift.provider);
   const declined = gift.status === 'failed' || gift.status === 'cancelled';
+  const campaign = campaigns.find((c) => c.id === gift.campaignId);
+  const church = campaign && churches.find((ch) => ch.id === campaign.churchId);
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
@@ -109,10 +114,23 @@ export default function GiftScreen({ route, navigation }: Props) {
             View the burden
           </Button>
         ) : null}
+        {!declined && campaign && (
+          <Button variant="ghost" onPress={() => setSharing(true)}>Share this burden</Button>
+        )}
         <Button variant="ghost" onPress={() => navigation.navigate('Tabs', { screen: 'Giving' })}>
           Giving history
         </Button>
       </View>
+      {campaign && church && (
+        <ShareSheet
+          open={sharing}
+          onClose={() => setSharing(false)}
+          campaign={campaign}
+          church={church}
+          fundraiser={findFundraiser(gift.fundraiserId, fundraisers)}
+          onFundraise={() => navigation.navigate('Fundraise', { campaignId: campaign.id })}
+        />
+      )}
     </ScrollView>
   );
 }

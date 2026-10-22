@@ -1,5 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
 import { colors, tile, font, type } from '../theme.js'
 import { Button, Label, Rule, Progress, Badge, Tile, FundingSquare, formatMoney } from '../components/UI.jsx'
+import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '../components/Community.jsx'
+import { findFundraiser, fundraisersFor, supportFor, updatesFor } from '../lib/community.js'
 import { campaigns, churches } from '../data/mock.js'
 
 // Burden detail. The user-facing word is "burden" — the data model still
@@ -10,8 +13,16 @@ import { campaigns, churches } from '../data/mock.js'
 //   3. Team         — who is responsible for what
 //   4. Money flow   — how funds get from donor to delivery
 //   5. Prayer group — donors can pray specifically, not just give
+// and, alongside them, the community pieces: Updates from the team, Words
+// of support from givers, Fundraisers carrying it with others, and Share.
 
-export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
+export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts = [], fundraisers = [], fundraiserId }) {
+  const [sharing, setSharing] = useState(false)
+  const fundraisersRef = useRef(null)
+  // A shared fundraiser link lands on that fundraiser.
+  useEffect(() => {
+    if (fundraiserId) fundraisersRef.current?.scrollIntoView({ block: 'center' })
+  }, [fundraiserId])
   const burden = campaigns.find(c => c.id === id)
   if (!burden) {
     return (
@@ -23,6 +34,10 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
   }
   const church = churches.find(ch => ch.id === burden.churchId)
   const pct = Math.round((burden.raised / burden.goal) * 100)
+  const updates = updatesFor(burden.id)
+  const words = supportFor(burden.id, gifts)
+  const carrying = fundraisersFor(burden.id, fundraisers, gifts)
+  const sharedFundraiser = findFundraiser(fundraiserId, fundraisers)
 
   // Itemised allocation — published in plain language per BURDEN principle.
   const items = [
@@ -78,6 +93,13 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
             }}>
               {burden.summary} Funds go straight to the church's verified payout account, with a public update every month.
             </p>
+          </section>
+
+          <Rule soft />
+
+          {/* Updates — dated posts from the team */}
+          <section style={{ padding: '32px 0' }}>
+            <UpdatesSection updates={updates} />
           </section>
 
           <Rule soft />
@@ -144,6 +166,25 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
           {/* Prayer group */}
           <section style={{ padding: '32px 0' }}>
             <PrayerGroup burden={burden} joined={joined} onToggle={onTogglePrayer} />
+          </section>
+
+          <Rule soft />
+
+          {/* Words of support — from givers, never with the amount */}
+          <section style={{ padding: '32px 0' }}>
+            <SupportSection words={words} onGive={() => navigate({ name: 'give', id: burden.id })} />
+          </section>
+
+          <Rule soft />
+
+          {/* Fundraisers — people carrying it with their own circle */}
+          <section ref={fundraisersRef} style={{ padding: '32px 0' }}>
+            <FundraisersSection
+              fundraisers={carrying}
+              highlightId={fundraiserId}
+              onGiveThrough={f => navigate({ name: 'give', id: burden.id, fundraiserId: f.id })}
+              onStart={() => navigate({ name: 'fundraise', id: burden.id })}
+            />
           </section>
 
           <Rule soft />
@@ -218,9 +259,14 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
               </div>
             </div>
 
-            <Button variant="onNavy" full onClick={() => navigate({ name: 'give', id: burden.id })}>
-              Carry this burden — give
+            <Button variant="onNavy" full onClick={() => navigate({ name: 'give', id: burden.id, fundraiserId: sharedFundraiser?.id })}>
+              {sharedFundraiser ? `Give through ${sharedFundraiser.own ? 'your page' : sharedFundraiser.name.split(' ')[0]}` : 'Carry this burden — give'}
             </Button>
+            <button onClick={() => setSharing(true)} style={{
+              width: '100%', padding: '14px 24px', borderRadius: 10, cursor: 'pointer',
+              background: 'transparent', border: '1px solid rgba(255,255,255,0.55)', color: tile.ink,
+              fontSize: type.xs.fontSize, letterSpacing: '6%', textTransform: 'uppercase', fontWeight: 600,
+            }}>Share</button>
 
             <p style={{ marginTop: 4, fontSize: 12, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
               Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
@@ -229,6 +275,14 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer }) {
           </Tile>
         </aside>
       </div>
+      <ShareSheet
+        open={sharing}
+        onClose={() => setSharing(false)}
+        campaign={burden}
+        church={church}
+        fundraiser={sharedFundraiser}
+        onFundraise={() => navigate({ name: 'fundraise', id: burden.id })}
+      />
     </main>
   )
 }

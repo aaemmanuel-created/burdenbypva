@@ -65,6 +65,12 @@ export type Gift = {
   token?: string;
   // paid from the donor's account credit (the BURDEN wallet) rather than a provider
   fromCredit?: boolean;
+  // Words of support shown on the burden page (never with the amount), the
+  // giver's name for them, and the fundraiser the gift came through.
+  message?: string;
+  donorName?: string;
+  fundraiserId?: string;
+  fundraiserName?: string;
 };
 
 export const churches: Church[] = [

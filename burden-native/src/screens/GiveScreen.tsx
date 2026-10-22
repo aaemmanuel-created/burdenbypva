@@ -9,6 +9,7 @@ import { useGifts } from '../context/GiftsContext';
 import type { RootStackParamList } from '../navigation/types';
 import { PAYMENT_METHODS, type ProviderId, liveCheckout, startCheckout } from '../lib/payments';
 import { demoEvents, demoHoldUntil } from '../lib/giftTimeline';
+import { MESSAGE_MAX, findFundraiser } from '../lib/community';
 
 const PRESETS = [5, 25, 100, 500];
 
@@ -17,7 +18,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Give'>;
 export default function GiveScreen({ route, navigation }: Props) {
   const campaign = campaigns.find((c) => c.id === route.params.campaignId);
   const church = campaign && churches.find((ch) => ch.id === campaign.churchId);
-  const { recordGift, creditBalance: credit } = useGifts();
+  const { recordGift, creditBalance: credit, fundraisers } = useGifts();
+  const fundraiser = findFundraiser(route.params.fundraiserId, fundraisers);
+  const [message, setMessage] = useState('');
 
   const [amount, setAmount] = useState<number>(25);
   const [custom, setCustom] = useState<string>('');
@@ -60,6 +63,11 @@ export default function GiveScreen({ route, navigation }: Props) {
       recurring,
       anonymous,
       timestamp,
+      // shown on the burden page under Words of support, never with the amount
+      message: message.trim() || undefined,
+      donorName: anonymous ? undefined : name.trim(),
+      fundraiserId: fundraiser?.id,
+      fundraiserName: fundraiser?.name,
     };
 
     // Live checkout: the provider's page opens in the browser and the
@@ -100,6 +108,12 @@ export default function GiveScreen({ route, navigation }: Props) {
       <Text style={styles.h1}>Support {church.name}</Text>
       <Text style={styles.sub}>{church.location.toUpperCase()}</Text>
       <Text style={[styles.sub, { marginTop: 4 }]}>{campaign.title.toUpperCase()}</Text>
+      {fundraiser && (
+        <Text style={styles.through}>
+          Through {fundraiser.own ? 'your fundraiser' : `${fundraiser.name}'s fundraiser`}. The gift still goes
+          straight to {church.name}'s verified account.
+        </Text>
+      )}
 
       <Rule soft style={{ marginVertical: 24 }} />
 
@@ -216,6 +230,26 @@ export default function GiveScreen({ route, navigation }: Props) {
         />
       </View>
 
+      {/* Words of support — optional, shown without the amount */}
+      <View style={{ marginTop: 24 }}>
+        <Label style={{ marginBottom: 12 }}>Words of support (optional)</Label>
+        <TextInput
+          multiline
+          maxLength={MESSAGE_MAX}
+          placeholder="A few words or a prayer for the church and the people this burden serves."
+          placeholderTextColor={colors.inkMuted}
+          value={message}
+          onChangeText={setMessage}
+          style={[styles.input, { minHeight: 84, textAlignVertical: 'top' }]}
+        />
+        <View style={styles.messageFoot}>
+          <Text style={[styles.toggleHelp, { flex: 1 }]}>
+            Shown on the burden page {anonymous ? 'as Anonymous' : 'with your name'}. Your amount is never shown.
+          </Text>
+          <Text style={styles.toggleHelp}>{message.length}/{MESSAGE_MAX}</Text>
+        </View>
+      </View>
+
       <Rule soft style={{ marginVertical: 24 }} />
 
       <View style={styles.totalRow}>
@@ -259,6 +293,8 @@ function Toggle({
 const styles = StyleSheet.create({
   h1: { fontFamily: font.bold, fontSize: 22, color: colors.ink, marginTop: 12, lineHeight: 28 },
   sub: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: colors.inkMuted, marginTop: 8 },
+  through: { fontFamily: font.regular, fontSize: 13, lineHeight: 20, color: colors.ink, marginTop: 14 },
+  messageFoot: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   presetRow: { flexDirection: 'row', gap: 4, marginBottom: 8 },
   preset: {
     flex: 1, paddingVertical: 16, alignItems: 'center',
