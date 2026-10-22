@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View, Pressable, Linking } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -7,7 +7,11 @@ import { Button, Label, Rule } from '../components/UI';
 import { colors, font, formatMoney } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
 import type { RootStackParamList } from '../navigation/types';
-import { PAYMENT_METHODS, type ProviderId, liveCheckout, startCheckout } from '../lib/payments';
+import {
+  MOMO_NETWORKS, type MomoNetworkId, PAYMENT_METHODS, type ProviderId, fetchGiftStatus, liveCheckout,
+  normaliseGhanaPhone, startCheckout, startMomoCharge, submitMomoOtp,
+} from '../lib/payments';
+import type { Gift } from '../data/mock';
 import { demoEvents, demoHoldUntil } from '../lib/giftTimeline';
 import { MESSAGE_MAX, findFundraiser } from '../lib/community';
 
@@ -21,6 +25,12 @@ export default function GiveScreen({ route, navigation }: Props) {
   const { recordGift, creditBalance: credit, fundraisers } = useGifts();
   const fundraiser = findFundraiser(route.params.fundraiserId, fundraisers);
   const [message, setMessage] = useState('');
+  // Paystack: approve on your phone (mobile money) or Paystack's own page.
+  const [momoDirect, setMomoDirect] = useState(true);
+  const [network, setNetwork] = useState<MomoNetworkId>('mtn');
+  const [phone, setPhone] = useState('');
+  const [waiting, setWaiting] = useState<{ gift: Gift; state: string; message?: string; demo?: boolean } | null>(null);
+  const [otp, setOtp] = useState('');
 
   const [amount, setAmount] = useState<number>(25);
   const [custom, setCustom] = useState<string>('');
@@ -46,8 +56,11 @@ export default function GiveScreen({ route, navigation }: Props) {
   const fee = coverFee ? Math.round((value * 0.045 + 0.3) * 100) / 100 : 0;
   const total = Math.round((value + fee) * 100) / 100;
   const creditCovers = useCredit && credit >= value && value >= 1;
+  const usingMomo = provider === 'paystack' && momoDirect;
+  const momoPhone = normaliseGhanaPhone(phone);
   // Email is needed even for anonymous gifts (receipt).
-  const canSubmit = !busy && value >= 1 && email.length > 0 && (anonymous || name.length > 0) && !(useCredit && value > credit);
+  const canSubmit = !busy && value >= 1 && email.length > 0 && (anonymous || name.length > 0) && !(useCredit && value > credit)
+    && !(usingMomo && !creditCovers && !momoPhone);
 
   async function submit() {
     if (!canSubmit || !campaign || !church) return;
@@ -68,7 +81,44 @@ export default function GiveScreen({ route, navigation }: Props) {
       donorName: anonymous ? undefined : name.trim(),
       fundraiserId: fundraiser?.id,
       fundraiserName: fundraiser?.name,
+      payoutTo: church.payoutTo,
     };
+
+    // Approve on your phone: the network sends a prompt; the donor enters
+    // their PIN on the phone. We wait here and watch the gift's status.
+    if (usingMomo && !creditCovers) {
+      const networkLabel = MOMO_NETWORKS.find((n) => n.id === network)!.label;
+      if (liveCheckout) {
+        setBusy(true);
+        try {
+          const res = await startMomoCharge({
+            ...details, churchId: church.id, coverFee, name, email, phone: momoPhone, network,
+          });
+          const gift: Gift = {
+            ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider: 'paystack',
+            momo: networkLabel, planId: res.planId, planToken: res.planToken,
+            status: res.state === 'failed' ? 'failed' : 'initiated', events: [{ step: 'gift_sent', occurred_at: timestamp }],
+          };
+          recordGift(gift);
+          if (res.state === 'failed') setError(res.message ?? 'Your network declined this payment.');
+          else if (res.state === 'paid') navigation.replace('Gift', { giftId: gift.id });
+          else setWaiting({ gift, state: res.state, message: res.message });
+        } catch (e) {
+          setError((e as Error).message);
+        } finally {
+          setBusy(false);
+        }
+        return;
+      }
+      // Demo: the "prompt" is approved after a few seconds; no money moves.
+      const gift: Gift = {
+        ...details, id: 'gift_' + Date.now(), live: false, provider: 'paystack', momo: networkLabel,
+        status: 'held', holdUntil: demoHoldUntil(timestamp),
+        events: demoEvents(timestamp, `Approved on ${networkLabel} — demo, no money moved.`),
+      };
+      setWaiting({ gift, state: 'approve', demo: true });
+      return;
+    }
 
     // Live checkout: the provider's page opens in the browser and the
     // payment server sends the donor back to burden://gift?gift=…
@@ -80,6 +130,7 @@ export default function GiveScreen({ route, navigation }: Props) {
         });
         recordGift({
           ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider,
+          planId: res.planId, planToken: res.planToken,
           status: 'initiated', events: [{ step: 'gift_sent', occurred_at: timestamp }],
         });
         navigation.replace('Gift', { giftId: res.giftId });
@@ -100,6 +151,32 @@ export default function GiveScreen({ route, navigation }: Props) {
       events: demoEvents(timestamp, creditCovers ? 'Paid from your account credit.' : 'Demo checkout — no payment processed.'),
     });
     navigation.replace('Gift', { giftId: id });
+  }
+
+  if (waiting) {
+    return (
+      <MomoWaiting
+        waiting={waiting}
+        phone={momoPhone}
+        network={MOMO_NETWORKS.find((n) => n.id === network)!}
+        otp={otp}
+        setOtp={setOtp}
+        error={error}
+        onOtp={async () => {
+          setError('');
+          try {
+            const r = await submitMomoOtp(waiting.gift.id, waiting.gift.token!, otp);
+            if (r.state === 'failed') setError(r.message ?? 'That code did not work.');
+            else setWaiting((w) => (w ? { ...w, state: r.state === 'paid' ? 'approve' : r.state, message: r.message } : w));
+          } catch (e) { setError((e as Error).message); }
+        }}
+        onDone={(gift) => {
+          if (waiting.demo) recordGift(gift);
+          navigation.replace('Gift', { giftId: gift.id });
+        }}
+        onCancel={() => { setWaiting(null); setError(''); }}
+      />
+    );
   }
 
   return (
@@ -160,9 +237,7 @@ export default function GiveScreen({ route, navigation }: Props) {
           checked={recurring}
           onChange={setRecurring}
           label="Make this a monthly gift"
-          help={liveCheckout
-            ? 'Only this first gift is charged for now — automatic monthly repeats are not switched on yet.'
-            : 'Cancel any time from your giving history.'}
+          help={monthlyHelp(provider, usingMomo)}
         />
         <Toggle
           checked={anonymous}
@@ -202,8 +277,46 @@ export default function GiveScreen({ route, navigation }: Props) {
             </Pressable>
           );
         })}
+        {provider === 'paystack' && (
+          <View style={{ marginLeft: 32 }}>
+            <Toggle
+              checked={momoDirect}
+              onChange={setMomoDirect}
+              label="Approve on my phone (mobile money)"
+              help="We send a prompt to your phone. You approve it with your PIN on the phone — you never type your PIN here."
+            />
+            {momoDirect && (
+              <View style={{ paddingTop: 14 }}>
+                <View style={styles.presetRow}>
+                  {MOMO_NETWORKS.map((n) => {
+                    const active = network === n.id;
+                    return (
+                      <Pressable key={n.id} onPress={() => setNetwork(n.id)} style={[styles.preset, active && styles.presetActive]}
+                        accessibilityRole="radio" accessibilityState={{ selected: active }}>
+                        <Text style={[styles.networkText, active && styles.presetTextActive]}>{n.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <TextInput
+                  keyboardType="phone-pad"
+                  placeholder="Mobile money number, e.g. 024 123 4567"
+                  placeholderTextColor={colors.inkMuted}
+                  value={phone}
+                  onChangeText={setPhone}
+                  style={styles.input}
+                />
+                {phone && !momoPhone ? (
+                  <Text style={[styles.toggleHelp, { color: colors.fundLow }]}>Enter a Ghana mobile number, e.g. 024 123 4567.</Text>
+                ) : null}
+              </View>
+            )}
+          </View>
+        )}
         <Text style={[styles.toggleHelp, { marginTop: 10 }]}>
-          You'll finish paying on the provider's secure page. BURDEN never sees your card or mobile-money PIN.
+          {usingMomo
+            ? 'BURDEN never sees your mobile money PIN. Never share it with anyone.'
+            : "You'll finish paying on the provider's secure page. BURDEN never sees your card or mobile-money PIN."}
         </Text>
       </View>
       )}
@@ -263,7 +376,10 @@ export default function GiveScreen({ route, navigation }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Button onPress={submit} disabled={!canSubmit}>
-        {busy ? 'Opening secure checkout…' : creditCovers ? `Give ${formatMoney(value)} from credit` : `Give ${formatMoney(total)}`}
+        {busy ? (usingMomo ? 'Sending the prompt…' : 'Opening secure checkout…')
+          : creditCovers ? `Give ${formatMoney(value)} from credit`
+          : usingMomo ? `Send prompt for ${formatMoney(total)}`
+          : `Give ${formatMoney(total)}`}
       </Button>
 
       <Text style={styles.disclaimer}>
@@ -272,6 +388,76 @@ export default function GiveScreen({ route, navigation }: Props) {
           ? "Payments run in test mode — use the provider's test card or test mobile-money number. No real money is taken."
           : 'This is a demo checkout — no payment is processed.'}
       </Text>
+    </ScrollView>
+  );
+}
+
+// What "monthly" means for the chosen way of paying (see supabase plan-logic.ts).
+function monthlyHelp(provider: ProviderId, usingMomo: boolean): string {
+  if (provider === 'flutterwave') return 'Monthly repeats are not available with Flutterwave yet — only this first gift is charged.';
+  if (usingMomo) return "Each month we send a new prompt to your phone and you approve it. Nothing is taken without you. Stop any time from the gift's page.";
+  return "Your card is charged again each month. Stop any time from the gift's page.";
+}
+
+// "Check your phone" — shown while the mobile money prompt is out.
+function MomoWaiting({
+  waiting, phone, network, otp, setOtp, error, onOtp, onDone, onCancel,
+}: {
+  waiting: { gift: Gift; state: string; message?: string; demo?: boolean };
+  phone: string | null; network: { id: string; label: string };
+  otp: string; setOtp: (v: string) => void; error: string;
+  onOtp: () => void; onDone: (gift: Gift) => void; onCancel: () => void;
+}) {
+  const { gift, state, message, demo } = waiting;
+  useEffect(() => {
+    if (state !== 'approve') return;
+    if (demo) {
+      const t = setTimeout(() => onDone(gift), 4000);
+      return () => clearTimeout(t);
+    }
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const check = async () => {
+      try {
+        const { gift: server } = await fetchGiftStatus(gift.id, gift.token!);
+        if (stop) return;
+        if (server.status !== 'initiated') { onDone(gift); return; }
+      } catch { /* keep waiting */ }
+      if (!stop) timer = setTimeout(check, 4000);
+    };
+    timer = setTimeout(check, 4000);
+    return () => { stop = true; clearTimeout(timer); };
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
+  const masked = phone ? `${phone.slice(0, 3)} ••• ${phone.slice(-4)}` : 'your phone';
+  return (
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingTop: 48, paddingBottom: 96 }}>
+      <Label>{network.label}</Label>
+      <Text style={styles.h1}>{state === 'otp' ? 'Enter the code from your network' : 'Check your phone'}</Text>
+      {state === 'otp' ? (
+        <>
+          <Text style={[styles.toggleHelp, { fontSize: 13, lineHeight: 21 }]}>{message}</Text>
+          <TextInput keyboardType="number-pad" value={otp} onChangeText={setOtp} placeholder="Code"
+            placeholderTextColor={colors.inkMuted} style={[styles.input, { marginTop: 20, letterSpacing: 4 }]} />
+          <Button style={{ marginTop: 16 }} onPress={onOtp} disabled={otp.length < 4}>Continue</Button>
+        </>
+      ) : (
+        <>
+          <Text style={[styles.toggleHelp, { fontSize: 13, lineHeight: 21, color: colors.inkSoft }]}>
+            We've sent a prompt to {masked} for {formatMoney(gift.total)}. Approve it with your mobile money PIN on your phone.
+          </Text>
+          <Text style={[styles.toggleHelp, { marginTop: 14, lineHeight: 18 }]}>
+            No prompt after a minute? {network.id === 'mtn' ? 'Dial *170#, choose My Wallet, then My Approvals. ' : ''}
+            BURDEN will never ask for your PIN.
+          </Text>
+          <Text style={[styles.sub, { marginTop: 32 }]} accessibilityLiveRegion="polite">
+            {demo ? 'DEMO — APPROVING IN A MOMENT…' : 'WAITING FOR YOUR APPROVAL…'}
+          </Text>
+        </>
+      )}
+      {error ? <Text style={[styles.error, { marginTop: 16 }]}>{error}</Text> : null}
+      <Button variant="ghost" style={{ marginTop: 32 }} onPress={demo || state === 'otp' ? onCancel : () => onDone(gift)}>
+        {demo || state === 'otp' ? 'Back' : 'Follow this gift'}
+      </Button>
     </ScrollView>
   );
 }
@@ -303,6 +489,7 @@ const styles = StyleSheet.create({
   presetActive: { backgroundColor: colors.ink },
   presetText: { fontFamily: font.bold, fontSize: 13, color: colors.ink },
   presetTextActive: { color: colors.accentInk },
+  networkText: { fontFamily: font.bold, fontSize: 11, color: colors.ink, textAlign: 'center' },
   input: {
     borderWidth: 1, borderColor: colors.rule, paddingHorizontal: 14, paddingVertical: 12,
     fontFamily: font.regular, fontSize: 13, color: colors.ink,

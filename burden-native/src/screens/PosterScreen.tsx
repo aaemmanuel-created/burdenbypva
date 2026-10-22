@@ -11,6 +11,7 @@ import { colors, font } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
 import { findFundraiser, shareText, shareUrl } from '../lib/community';
 import { qrRuns } from '../lib/qr';
+import { USSD_CODE } from '../lib/payments';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Poster'>;
@@ -61,6 +62,9 @@ export default function PosterScreen({ route }: Props) {
           Mobile money, card, Apple Pay or Google Pay. Every gift goes to the church's verified account, and the
           page shows where every dollar goes.
         </Text>
+        {USSD_CODE ? (
+          <Text style={styles.scan}>No smartphone? Dial {USSD_CODE} on MTN, Telecel or AirtelTigo.</Text>
+        ) : null}
         <Text style={styles.url} selectable>{url}</Text>
       </View>
       <Button

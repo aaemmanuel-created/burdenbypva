@@ -215,6 +215,9 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
               Donors may also cover BURDEN's platform fee at checkout, in which case 100% of
               the gift reaches the church net of payment processing.
             </p>
+            <p style={{ marginTop: 10, fontSize: 12, color: colors.inkMuted, lineHeight: 1.6 }}>
+              Paid to {church.name}'s verified {church.payoutTo} after a 3-day hold.
+            </p>
           </section>
 
           <Rule soft />

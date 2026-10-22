@@ -83,12 +83,57 @@ Run the server unit tests any time with:
 node --test 'supabase/tests/*.test.ts'
 ```
 
+## Mobile money, monthly gifts, payouts and USSD (added 2026-10-22)
+
+_Studied from MTN MoMo and expressPay with REA. Test mode only, like everything above._
+
+**What was added**
+
+| Feature | Where | What the donor or church sees |
+|---|---|---|
+| **Approve on your phone** | `momo-charge`, `momo-otp`, `_shared/momo.ts` | On the Give screen, Paystack → "Approve on my phone": pick MTN / Telecel / AirtelTigo, type the number, and a prompt arrives on the phone to approve with the PIN. A "Check your phone" screen waits, then opens the gift. Telecel sometimes sends a code first, which the screen asks for. The PIN never touches BURDEN. |
+| **Monthly gifts that repeat** | `recurring_plans` table, `_shared/plans.ts`, `run-recurring`, `cancel-recurring` | Stripe cards become a Stripe subscription. Paystack cards reuse their saved authorisation. Mobile money sends a fresh prompt each month, so nothing is taken without the donor's PIN. Flutterwave: first gift only. The gift page shows "Monthly gift" with **Stop monthly gift**. After three failed months a plan stops by itself. |
+| **Church payouts to MoMo or bank** | `church_payout_accounts` table, `church-payout-account`, `run-payouts` | Each burden says where the church is paid, e.g. "verified MTN MoMo business wallet". Live payouts send Paystack gifts after the hold, **only when `PAYOUTS_LIVE=true`**. Test payouts stay simulated, but name the account. |
+| **USSD giving** | `ussd`, `_shared/ussd-logic.ts`, `_shared/burdens.ts` | Dial a short code → 1 Give → choose a burden → amount in GHS → confirm → the same MoMo prompt. Works on any phone, no data. |
+| **QR posters** | apps only (`Poster` screen) | Share → "QR poster for church". The website prints it; the phone shows it full size. |
+
+**Extra setup steps**
+
+1. Run the new migration and deploy the new functions:
+   ```bash
+   supabase db push
+   ```
+   ```bash
+   supabase functions deploy
+   ```
+2. Add the cron secret (make up a long random string):
+   ```bash
+   supabase secrets set CRON_SECRET=<random string>
+   ```
+3. Schedule the two daily jobs in Supabase → Integrations → Cron (pg_cron + pg_net): a daily `POST` to `…/functions/v1/run-recurring` and to `…/functions/v1/run-payouts`, each with the header `x-burden-cron: <CRON_SECRET>`.
+4. **Stripe webhook:** add the event `invoice.paid` to the existing endpoint, so later months of a Stripe monthly gift are recorded.
+5. **Register a church's payout account** (a BURDEN reviewer, not the church):
+   ```bash
+   curl -X POST https://<project>.supabase.co/functions/v1/church-payout-account -H "x-burden-admin-key: <CHURCH_ADMIN_KEY>" -H "Content-Type: application/json" -d '{"church_id":"ch_accra_st_andrew","method":"momo","network":"mtn","account_name":"St Andrew Presbyterian Church","account_number":"0241234567","verified":true}'
+   ```
+   For a bank account use `"method":"bank"` plus `"bank_code"` from Paystack's bank list.
+6. **Paystack transfers:** in the Paystack dashboard, turn off "OTP for transfers", otherwise API payouts wait for a code. Payouts come from your Paystack balance, so the balance must hold the collected GHS.
+7. **USSD (optional, costs money):** rent a short code from a gateway (expressPay, Africa's Talking, Hubtel, Arkesel …). Point its callback at `https://<project>.supabase.co/functions/v1/ussd?key=<USSD_SHARED_SECRET>` and set the secret:
+   ```bash
+   supabase secrets set USSD_SHARED_SECRET=<random string>
+   ```
+   Then show the code in the apps: `VITE_BURDEN_USSD_CODE` (web) and `EXPO_PUBLIC_BURDEN_USSD_CODE` (native). Posters then add "No smartphone? Dial …". The handler expects the Africa's Talking format (`text` = the whole path joined by `*`); other gateways may need a small adapter.
+
+**Test in Paystack's test mode before going further:** a MoMo test charge (Paystack publishes test mobile money numbers), a monthly card gift, and the USSD placeholder email (`<number>@ussd.burden.invalid` — Paystack needs an email; check it is accepted).
+
+**Not built — diaspora remittance (MoMo Remittances API).** MTN only opens that product to licensed money-transfer operators, and BURDEN collects gifts for churches, not person-to-person transfers. Diaspora donors are already covered: they give by card (Stripe) and the church is paid locally (MoMo or bank) after the hold. Revisit only if BURDEN partners with a licensed remittance company.
+
 ## Go-live checklist (NOT done — needed before real money)
 
 1. **Legal entity.** BURDEN must be a registered company or charity that can open live provider accounts. The blueprint recommends a UK CIO (charity), which also unlocks Gift Aid and Apple's charity rule. Get counsel review first (blueprint §15).
 2. **Provider approval (KYB)** for each live account. Each provider will ask what BURDEN is, because collecting money *on behalf of churches* is a marketplace model.
-3. **Real payouts to churches.** Stripe Connect accounts, Paystack subaccounts and Flutterwave transfers each need church onboarding and verification. Today "Paid to church" is simulated in test mode only.
-4. **Refunds** (7-day self-serve window), **monthly repeat charges**, **emailed receipts / tax receipts**, **sanctions screening**, and a **live FX rate source** (test mode uses fixed rates).
+3. **Real payouts to churches.** Paystack gifts can now be paid to a church's verified MoMo wallet or bank (`run-payouts`, behind `PAYOUTS_LIVE=true`). Stripe and Flutterwave gifts still need Stripe Connect / Flutterwave transfers and church onboarding.
+4. **Refunds** (7-day self-serve window), **SMS receipts for USSD gifts**, **emailed receipts / tax receipts**, **sanctions screening**, and a **live FX rate source** (test mode uses fixed rates).
 5. **Apple App Store.** Guideline 3.2.1(vi) lets approved charities take donations outside in-app purchase. The native app already sends donors to the provider's web page, which matches the blueprint's plan.
 6. **Donor accounts.** Gifts are currently remembered per device (web: browser storage; native: until the app closes). Logging in would let donors see their gifts on any device.
 7. Only then: set `PAYMENTS_LIVE=true` on the server. Until that's set, the server refuses any live key, even if one is entered by mistake.

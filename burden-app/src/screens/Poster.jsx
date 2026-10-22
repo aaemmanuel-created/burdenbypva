@@ -2,6 +2,7 @@ import { colors } from '../theme.js'
 import { Badge, Button, Label } from '../components/UI.jsx'
 import { qrSvgPath } from '../lib/qr.js'
 import { findFundraiser, shareUrl } from '../lib/community.js'
+import { USSD_CODE } from '../lib/payments.js'
 import { campaigns, churches } from '../data/mock.js'
 
 // A printable QR poster for a burden — for the church noticeboard or the
@@ -53,6 +54,11 @@ export default function Poster({ id, navigate, fundraisers = [], fundraiserId })
           Mobile money, card, Apple Pay or Google Pay. Every gift goes to the church's verified account,
           and the page shows where every dollar goes.
         </div>
+        {USSD_CODE && (
+          <div style={{ fontSize: 13, color: colors.ink, marginTop: 4 }}>
+            No smartphone? Dial <strong>{USSD_CODE}</strong> on MTN, Telecel or AirtelTigo.
+          </div>
+        )}
         <div style={{ fontSize: 10, letterSpacing: 1, color: colors.inkMuted, wordBreak: 'break-all', marginTop: 8 }}>{url}</div>
         <div style={{ fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: colors.inkMuted, marginTop: 16 }}>
           BURDEN by HOUSEPVA

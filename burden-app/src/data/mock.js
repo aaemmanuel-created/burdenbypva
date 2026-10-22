@@ -8,6 +8,8 @@ import redeemerClinic from '../assets/burdens/redeemer-clinic.jpg'
 export const churches = [
   {
     id: 'ch_nairobi_grace',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'Equity Bank account, Nairobi',
     name: 'Grace Community Church',
     location: 'Nairobi, Kenya',
     tradition: 'Evangelical',
@@ -21,6 +23,8 @@ export const churches = [
   },
   {
     id: 'ch_lagos_redeemer',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'Zenith Bank account, Lagos',
     name: 'Redeemer Chapel Lagos',
     location: 'Lagos, Nigeria',
     tradition: 'Pentecostal',
@@ -34,6 +38,8 @@ export const churches = [
   },
   {
     id: 'ch_accra_st_andrew',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'MTN MoMo business wallet',
     name: "St. Andrew's Presbyterian",
     location: 'Accra, Ghana',
     tradition: 'Mainline Protestant',
@@ -47,6 +53,8 @@ export const churches = [
   },
   {
     id: 'ch_london_allnations',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'Lloyds Bank account, UK',
     name: 'All Nations Fellowship',
     location: 'London, United Kingdom',
     tradition: 'Non-denominational',
@@ -60,6 +68,8 @@ export const churches = [
   },
   {
     id: 'ch_manila_lighthouse',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'BPI account, Manila',
     name: 'Lighthouse Bible Church',
     location: 'Manila, Philippines',
     tradition: 'Baptist',
@@ -176,7 +186,7 @@ export const campaigns = [
     ],
     moneyWorkflow: [
       'Donors give via BURDEN.',
-      'Funds held in escrow for 3 banking days, then released to St. Andrew\'s Presbyterian\'s verified payout account at GCB Bank, Accra.',
+      'Funds held in escrow for 3 banking days, then released to St. Andrew\'s Presbyterian\'s verified MTN MoMo business wallet.',
       'Bursary committee disburses directly to the schools — money does not pass through students or families.',
       'Mr. Ofori (CA) reconciles every term against published school fee schedules.',
       'Names of supported students (anonymised) and grades published at the end of each term.',

@@ -13,6 +13,7 @@ export type Church = {
   summary: string;
   leadership: string;
   founded: number;
+  payoutTo: string;
 };
 
 export type Campaign = {
@@ -71,11 +72,21 @@ export type Gift = {
   donorName?: string;
   fundraiserId?: string;
   fundraiserName?: string;
+  // Approved on the donor's phone by mobile money (e.g. "MTN MoMo").
+  momo?: string;
+  // Where the church is paid, e.g. "MTN MoMo business wallet".
+  payoutTo?: string;
+  // Monthly gifts: the plan and the donor's private key to stop it.
+  planId?: string;
+  planToken?: string;
+  plan?: { status: string; note?: string | null; method?: string | null; nextChargeAt?: string | null };
 };
 
 export const churches: Church[] = [
   {
     id: 'ch_nairobi_grace',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'Equity Bank account, Nairobi',
     name: 'Grace Community Church',
     location: 'Nairobi, Kenya',
     tradition: 'Evangelical',
@@ -89,6 +100,8 @@ export const churches: Church[] = [
   },
   {
     id: 'ch_lagos_redeemer',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'Zenith Bank account, Lagos',
     name: 'Redeemer Chapel Lagos',
     location: 'Lagos, Nigeria',
     tradition: 'Pentecostal',
@@ -102,6 +115,8 @@ export const churches: Church[] = [
   },
   {
     id: 'ch_accra_st_andrew',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'MTN MoMo business wallet',
     name: "St. Andrew's Presbyterian",
     location: 'Accra, Ghana',
     tradition: 'Mainline Protestant',
@@ -115,6 +130,8 @@ export const churches: Church[] = [
   },
   {
     id: 'ch_london_allnations',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'Lloyds Bank account, UK',
     name: 'All Nations Fellowship',
     location: 'London, United Kingdom',
     tradition: 'Non-denominational',
@@ -128,6 +145,8 @@ export const churches: Church[] = [
   },
   {
     id: 'ch_manila_lighthouse',
+    // Where gifts are paid after the hold (MoMo wallet or bank, verified by BURDEN).
+    payoutTo: 'BPI account, Manila',
     name: 'Lighthouse Bible Church',
     location: 'Manila, Philippines',
     tradition: 'Baptist',

@@ -78,7 +78,7 @@ export function buildTimeline(gift) {
       label: 'Paid to church',
       done: !!at.paid_out,
       time: at.paid_out ? fmtWhen(at.paid_out.occurred_at) : gift.holdUntil && `est. ${fmtDay(gift.holdUntil)}`,
-      detail: at.paid_out?.note || `Sent to ${church}'s verified payout account.`,
+      detail: at.paid_out?.note || `Sent to ${church}'s verified ${gift.payoutTo || 'payout account'}.`,
     },
     {
       key: 'church_confirmed',

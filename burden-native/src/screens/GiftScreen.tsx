@@ -9,9 +9,9 @@ import { Button, Label } from '../components/UI';
 import Timeline from '../components/Timeline';
 import { colors, font, formatMoney } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
-import { PAYMENT_METHODS, fetchGiftStatus, liveCheckout } from '../lib/payments';
+import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout } from '../lib/payments';
 import { settleDemoGift } from '../lib/giftTimeline';
-import { campaigns, churches, type GiftStatus } from '../data/mock';
+import { campaigns, churches, type Gift, type GiftStatus } from '../data/mock';
 import { ShareSheet } from '../components/Community';
 import { findFundraiser } from '../lib/community';
 import type { RootStackParamList } from '../navigation/types';
@@ -51,10 +51,10 @@ export default function GiftScreen({ route, navigation }: Props) {
     const started = Date.now();
     async function refresh() {
       try {
-        const { gift: server, events } = await fetchGiftStatus(id, token!);
+        const { gift: server, events, plan } = await fetchGiftStatus(id, token!);
         if (stopped) return;
         setError('');
-        updateGift(id, { ...server, status: server.status as GiftStatus, events });
+        updateGift(id, { ...server, status: server.status as GiftStatus, events, ...(plan ? { plan } : {}) });
         if (server.status === 'initiated' && Date.now() - started < POLL_FOR_MS) {
           timer = setTimeout(refresh, POLL_MS);
         }
@@ -95,7 +95,9 @@ export default function GiftScreen({ route, navigation }: Props) {
         </Text>
       ) : null}
       <Text style={[styles.sub, { marginTop: 4 }]}>
-        {gift.fromCredit ? 'Paid from account credit' : gift.live && method ? method.detail.split('.')[0] : 'Demo checkout'}
+        {gift.fromCredit ? 'Paid from account credit'
+          : gift.momo ? `${gift.momo} — approved on your phone`
+          : gift.live && method ? method.detail.split('.')[0] : 'Demo checkout'}
         {gift.testMode || !gift.live ? ' · Test only — no real money moved' : ''}
       </Text>
 
@@ -105,6 +107,8 @@ export default function GiftScreen({ route, navigation }: Props) {
         <Text style={[styles.sub, { marginTop: 20 }]}>Checking with the payment provider…</Text>
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {gift.recurring && !declined && <MonthlyGift gift={gift} live={live} />}
 
       <View style={{ gap: 8, marginTop: 32 }}>
         {declined ? (
@@ -135,7 +139,52 @@ export default function GiftScreen({ route, navigation }: Props) {
   );
 }
 
+// A monthly gift: whether it is running, how each month is paid, and a way to stop it.
+function MonthlyGift({ gift, live }: { gift: Gift; live: boolean }) {
+  const { updateGift } = useGifts();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const plan = gift.plan ?? { status: gift.live ? 'pending' : 'active', method: gift.momo ? 'momo' : 'card' };
+  const running = plan.status === 'active' || plan.status === 'pending';
+  const next = plan.nextChargeAt
+    ? new Date(plan.nextChargeAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+    : null;
+  const how = plan.method === 'momo'
+    ? 'Each month we send a prompt to your phone and you approve it with your PIN.'
+    : plan.method === 'subscription' ? 'Your card is charged each month by Stripe.'
+    : 'Your card is charged again each month.';
+  async function stop() {
+    setBusy(true); setError('');
+    try {
+      if (live && gift.planId && gift.planToken) await cancelMonthlyGift(gift.planId, gift.planToken);
+      updateGift(gift.id, { plan: { ...plan, status: 'cancelled', note: 'You stopped this monthly gift.' } });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <View style={{ marginTop: 32 }}>
+      <Label style={{ marginBottom: 12 }}>Monthly gift</Label>
+      <Text style={styles.body}>
+        {running
+          ? `${how} ${plan.status === 'pending' ? 'It starts once this first gift is confirmed.' : next ? `Next: ${next}.` : ''}`
+          : plan.note || 'This monthly gift has stopped.'}
+        {!gift.live ? ' Demo — no money moves.' : ''}
+      </Text>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {running && (live ? Boolean(gift.planToken) : true) && (
+        <Button variant="ghost" style={{ marginTop: 14 }} onPress={stop} disabled={busy}>
+          {busy ? 'Stopping…' : 'Stop monthly gift'}
+        </Button>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  body: { fontFamily: font.regular, fontSize: 13, lineHeight: 21, color: colors.inkSoft },
   h1: { fontFamily: font.bold, fontSize: 22, color: colors.ink, marginTop: 12, lineHeight: 28 },
   sub: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: colors.inkMuted, marginTop: 8, lineHeight: 15 },
   error: { fontFamily: font.regular, fontSize: 12, color: colors.fundLow, marginTop: 20 },

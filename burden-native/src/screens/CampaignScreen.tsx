@@ -165,6 +165,9 @@ export default function CampaignScreen({ route, navigation }: Props) {
           Donors may also cover BURDEN's platform fee at checkout, in which case 100% of the gift
           reaches the church net of payment processing.
         </Text>
+        <Text style={[styles.smallNote, { marginTop: 8 }]}>
+          Paid to {church.name}'s verified {church.payoutTo} after a 3-day hold.
+        </Text>
       </View>
 
       <Rule soft />
