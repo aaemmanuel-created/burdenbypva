@@ -35,7 +35,9 @@ type EventMap = { tabPress: { data: undefined; canPreventDefault: false } };
 
 type Props = DefaultNavigatorOptions<ParamListBase, string | undefined, TabNavigationState<ParamListBase>, AppleTabOptions, EventMap, any>
   & TabRouterOptions
-  & { tintColor?: string; minimizeOnScroll?: boolean };
+  & { tintColor?: string; minimizeOnScroll?: boolean;
+      // the tab names' type: the old dock's labels (regular, bold when selected, one size)
+      labelFont?: { regular: string; bold: string; size: number } };
 
 // the header the tabs wore before: the word centred, bold, on the paper
 function TabHeader({ title }: { title: string }) {
@@ -47,10 +49,17 @@ function TabHeader({ title }: { title: string }) {
   );
 }
 
-function AppleTabNavigator({ id, initialRouteName, backBehavior, children, screenListeners, screenOptions, tintColor, minimizeOnScroll }: Props) {
+function AppleTabNavigator({ id, initialRouteName, backBehavior, children, screenListeners, screenOptions, tintColor, minimizeOnScroll, labelFont }: Props) {
   const { state, descriptors, navigation, NavigationContent } = useNavigationBuilder<
     TabNavigationState<ParamListBase>, TabRouterOptions, TabActionHelpers<ParamListBase>, AppleTabOptions, EventMap
   >(TabRouter, { id, initialRouteName, backBehavior, children, screenListeners, screenOptions });
+
+  // one look for every layout the bar can take (stacked on a phone, inline when wide)
+  const item = labelFont ? {
+    normal: { tabBarItemTitleFontFamily: labelFont.regular, tabBarItemTitleFontSize: labelFont.size },
+    selected: { tabBarItemTitleFontFamily: labelFont.bold, tabBarItemTitleFontSize: labelFont.size },
+  } : undefined;
+  const appearance = item ? { stacked: item, inline: item, compactInline: item } : undefined;
 
   return (
     <NavigationContent>
@@ -74,6 +83,8 @@ function AppleTabNavigator({ id, initialRouteName, backBehavior, children, scree
               isFocused={i === state.index}
               title={options.title ?? route.name}
               badgeValue={options.badge}
+              standardAppearance={appearance}
+              scrollEdgeAppearance={appearance}
               icon={options.sfSymbol ? { sfSymbolName: options.sfSymbol } : undefined}
               selectedIcon={options.sfSymbolSelected ? { sfSymbolName: options.sfSymbolSelected } : undefined}
             >

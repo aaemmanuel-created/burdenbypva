@@ -37,10 +37,12 @@ function Tabs() {
   const given = gifts.filter(isGiven).length;
   return (
     <DockToneProvider>
-    <Tab.Navigator tintColor={colors.ink} minimizeOnScroll>
+    <Tab.Navigator tintColor={colors.ink} minimizeOnScroll
+      // the old dock's names: HOME · DISCOVER · GIVING · ABOUT, regular, bold when selected
+      labelFont={{ regular: font.regular, bold: font.bold, size: 10.5 }}>
       {TABS.map((t) => (
         <Tab.Screen key={t.name} name={t.name} component={t.component}
-          options={{ title: t.name, sfSymbol: t.icon, sfSymbolSelected: t.on, headerTitle: 'BURDEN',
+          options={{ title: t.name.toUpperCase(), sfSymbol: t.icon, sfSymbolSelected: t.on, headerTitle: 'BURDEN',
             // the Giving tab counts the gifts you have given, as the old dock's badge did
             badge: t.name === 'Giving' && given > 0 ? String(given) : undefined }} />
       ))}
