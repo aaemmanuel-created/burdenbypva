@@ -25,6 +25,9 @@ Deno.serve(async (req) => {
   for (const g of gifts ?? []) {
     const { data: account } = await db.from('church_payout_accounts').select('*')
       .eq('church_id', g.church_id).maybeSingle();
+    // A church the BURDEN team suspended (admin console) is paid nothing until it is restored.
+    const { data: tier } = await db.from('church_tiers').select('tier').eq('church_id', g.church_id).maybeSingle();
+    if (tier?.tier === 'Suspended') { results.push({ gift: g.id, result: 'waiting: church suspended' }); continue; }
     const blocker = payoutBlocker(g, account as PayoutAccount | null);
     if (blocker) { results.push({ gift: g.id, result: `waiting: ${blocker}` }); continue; }
     const a = account as PayoutAccount;

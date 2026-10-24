@@ -9,10 +9,16 @@
 //        payout   { method, network, accountName, accountNumber, bankCode? } — submit for verification
 //        invite   { email, displayName, roleTitle, role }   (church admins)
 //        remove   { email }                                  (church admins)
+//        edit     { campaignId, fields: { summary?, objective?, currentState?, moneyWorkflow?, prayerFocus? } }
+//                 — new wording for a burden; public once a BURDEN reviewer approves it
+//
+// Every action is written to the audit log.
 //
 // A BURDEN reviewer adds a church's first admin with the CHURCH_ADMIN_KEY
 // header (x-burden-admin-key) and action "invite".
 
+import { parseBurdenEdit } from '../_shared/admin-logic.ts';
+import { audit } from '../_shared/auth.ts';
 import { timingSafeEqual } from '../_shared/crypto.ts';
 import {
   burdensOf, churchView, type GiftForChurch, maskAccount, type Member, ownsBurden, parseInvite, parseUpdate, totals,
@@ -68,6 +74,10 @@ Deno.serve(async (req) => {
         .eq('church_id', m.church_id).maybeSingle();
       const { data: team } = await db.from('church_members').select('email, display_name, role_title, role')
         .eq('church_id', m.church_id).is('removed_at', null).order('invited_at');
+      const { data: edits } = await db.from('burden_edits').select('id, created_at, campaign_id, fields, flags, status, review_note, submitted_by')
+        .eq('church_id', m.church_id).order('created_at', { ascending: false }).limit(20);
+      const { data: content } = await db.from('burden_content').select('campaign_id, fields')
+        .in('campaign_id', burdensOf(m.church_id).map((x) => x.id));
       const list = (gifts ?? []) as GiftForChurch[];
       churches.push({
         churchId: m.church_id,
@@ -76,6 +86,8 @@ Deno.serve(async (req) => {
         totals: totals(list),
         gifts: list.map(churchView),
         updates: updates ?? [],
+        edits: edits ?? [],
+        content: Object.fromEntries((content ?? []).map((c) => [c.campaign_id, c.fields])),
         payout: account ? {
           method: account.method, network: account.network, accountName: account.account_name,
           account: maskAccount(account.account_number), verified: !!account.verified_at, submittedBy: account.submitted_by,
@@ -104,6 +116,7 @@ Deno.serve(async (req) => {
       });
       if (error) return json({ error: 'Could not record the confirmation.' }, 500);
       if (!data) return json({ error: 'Only gifts that have been paid out can be confirmed.' }, 409);
+      await audit(actor, 'gift.confirm', 'gift', gift.id, { church: churchId });
       return json({ ok: true });
     }
 
@@ -117,6 +130,7 @@ Deno.serve(async (req) => {
         author: me?.display_name ?? 'BURDEN', role_title: me?.role_title ?? '',
       });
       if (error) return json({ error: 'Could not post the update.' }, 500);
+      await audit(actor, 'update.post', 'burden', campaignId, { title: u.title });
       return json({ ok: true }); // givers who asked are emailed by notify-sweep
     }
 
@@ -151,6 +165,7 @@ Deno.serve(async (req) => {
         console.error('church payout submit failed', e);
         return json({ error: 'Paystack could not check this account. Please check the details.' }, 502);
       }
+      await audit(actor, 'payout.submit', 'church', churchId, { method, network });
       return json({ ok: true, payoutTo: payoutLabel({ method, network, account_number: accountNumber }), verified: false });
     }
 
@@ -162,6 +177,7 @@ Deno.serve(async (req) => {
         if (target === me?.email) return json({ error: 'You cannot remove yourself.' }, 400);
         await db.from('church_members').update({ removed_at: new Date().toISOString() })
           .eq('church_id', churchId).eq('email', target);
+        await audit(actor, 'team.remove', 'church', churchId, { member: target });
         return json({ ok: true });
       }
       const inv = parseInvite(b);
@@ -171,7 +187,23 @@ Deno.serve(async (req) => {
         role: inv.role, invited_by: actor, removed_at: null,
       }, { onConflict: 'church_id,email' });
       if (error) return json({ error: 'Could not add them.' }, 500);
+      await audit(actor, 'team.add', 'church', churchId, { member: inv.email, role: inv.role });
       return json({ ok: true }); // they sign in with their own email; no password to share
+    }
+
+    case 'edit': {
+      const campaignId = String(b.campaignId ?? '');
+      if (!ownsBurden(churchId, campaignId)) return json({ error: 'That burden is not one of your church’s.' }, 403);
+      const e = parseBurdenEdit(b.fields);
+      if (!e.ok) return json({ error: e.error }, 400);
+      // A newer proposal replaces one still waiting.
+      await db.from('burden_edits').update({ status: 'withdrawn' }).eq('campaign_id', campaignId).eq('status', 'pending');
+      const { data, error } = await db.from('burden_edits').insert({
+        campaign_id: campaignId, church_id: churchId, submitted_by: actor, fields: e.value.fields, flags: e.value.flags,
+      }).select('id').single();
+      if (error) return json({ error: 'Could not send the changes.' }, 500);
+      await audit(actor, 'edit.submit', 'burden', campaignId, { edit: data.id, fields: Object.keys(e.value.fields), flags: e.value.flags });
+      return json({ ok: true, flags: e.value.flags });
     }
 
     default:
