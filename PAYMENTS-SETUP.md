@@ -156,6 +156,21 @@ Only approved words are public (`support-messages`). A reviewer clears held ones
 4. Check `UK_SANCTIONS_URL` still serves the UK consolidated list CSV — the UK has been moving it to the FCDO's UK Sanctions List.
 5. Postmark: verify the sending domain (SPF/DKIM) so receipts aren't treated as spam.
 
+## Church accounts and notifications (added 2026-10-25)
+
+**Church dashboard** ("For churches" in the website footer; web only — church staff manage from a computer). Staff sign in with a one-time code sent to their email (Supabase Auth). They see their burdens' totals and gifts (never a giver's email; anonymous givers stay anonymous), confirm when money arrived (with a note to the giver), post updates (shown on the burden page at once, under their name), submit a payout account (a BURDEN reviewer still verifies it), and — if they are an admin — add or remove team members.
+
+**Setting up a church:** BURDEN adds the church's first admin, then that admin adds the rest from the dashboard.
+```bash
+curl -X POST https://<project>.supabase.co/functions/v1/church -H "x-burden-admin-key: <CHURCH_ADMIN_KEY>" -H "Content-Type: application/json" -d '{"churchId":"ch_accra_st_andrew","action":"invite","email":"pastor@church.org","displayName":"Rev. Dr. Kofi Mensah","roleTitle":"Burden lead","role":"admin"}'
+```
+In Supabase → Authentication, keep **Email** sign-in on and set the email template to show the 6-digit code (`{{ .Token }}`).
+
+**Notifications.** `notify-sweep` (add a cron job every 10 minutes, header `x-burden-cron`) sends, once each:
+- "Your gift reached <church>" when a gift is paid out, and "<church> confirmed your gift" when the church confirms — always, by email (Postmark) and phone push;
+- "New update" when a church posts — email only to givers who ticked "Email me when the church posts an update" (one-click unsubscribe in every email; set `UNSUBSCRIBE_SECRET`), push to phones following that burden.
+Phone push needs a development or store build of the app (`expo-notifications`; Expo Go can't receive pushes on Android). The website has no browser push; the gift page shows the same steps.
+
 ## Go-live checklist (NOT done — needed before real money)
 
 1. **Legal entity.** BURDEN must be a registered company or charity that can open live provider accounts. The blueprint recommends a UK CIO (charity), which also unlocks Gift Aid and Apple's charity rule. Get counsel review first (blueprint §15).

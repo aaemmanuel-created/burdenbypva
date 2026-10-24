@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { colors, font } from '../theme.js'
+import { useT } from '../lib/i18n.jsx'
 
 // The floating glass dock — web twin of burden-native/src/components/Dock.tsx
 // and of the HOUSEPVA dock: a see-through pill floating over the page,
@@ -20,6 +21,7 @@ const ITEMS = [
 export const DOCK_SPACE = 96
 
 export default function Dock({ route, navigate, givingCount = 0 }) {
+  const t = useT()
   const dockRef = useRef(null)
   const itemRefs = useRef({})
   const [lens, setLens] = useState(null)
@@ -130,7 +132,7 @@ export default function Dock({ route, navigate, givingCount = 0 }) {
               transition: 'color 200ms ease, transform 160ms ease',
             }}
           >
-            {it.label}
+            {t('nav.' + (it.id === 'history' ? 'giving' : it.id))}
             {it.id === 'history' && givingCount > 0 && (
               <span style={{ marginLeft: 6, fontSize: 9, color: onDark ? 'rgba(255,255,255,0.8)' : colors.inkMuted }}>
                 {givingCount}

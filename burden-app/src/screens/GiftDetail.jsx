@@ -4,6 +4,7 @@ import { Button, Label, formatMoney } from '../components/UI.jsx'
 import Timeline from '../components/Timeline.jsx'
 import { campaigns } from '../data/mock.js'
 import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout, requestRefund } from '../lib/payments.js'
+import { useT } from '../lib/i18n.jsx'
 
 // One gift and where it has got to. Live gifts refresh from the server —
 // every few seconds while the payment is still being confirmed, once
@@ -13,6 +14,7 @@ const POLL_MS = 4000
 const POLL_FOR_MS = 3 * 60_000
 
 export default function GiftDetail({ gift, navigate, updateGift }) {
+  const t = useT()
   const [error, setError] = useState('')
 
   const id = gift?.id
@@ -59,9 +61,9 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
 
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '40px 28px 96px' }}>
-      <button onClick={() => navigate({ name: 'history' })} style={backLink}>← Giving history</button>
+      <button onClick={() => navigate({ name: 'history' })} style={backLink}>← {t('gift.history')}</button>
 
-      <Label>Your gift</Label>
+      <Label>{t('gift.label')}</Label>
       <h1 style={{
         fontFamily: font.serif, fontSize: type['2xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%',
         lineHeight: type['2xl'].lineHeight, margin: '16px 0 8px',
@@ -82,7 +84,7 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
       </div>
 
       <section style={{ marginTop: 48 }}>
-        <Label style={{ marginBottom: 24 }}>Progress</Label>
+        <Label style={{ marginBottom: 24 }}>{t('gift.progress')}</Label>
         <Timeline gift={gift} />
         {awaiting && live && (
           <p style={{ fontSize: type.xs.fontSize, color: colors.inkMuted, marginTop: 24 }}>
@@ -122,7 +124,7 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 48 }}>
         {declined
           ? <Button onClick={() => navigate({ name: 'give', id: gift.campaignId })}>Try again</Button>
-          : <Button onClick={() => navigate({ name: 'campaign', id: gift.campaignId })}>View the burden</Button>}
+          : <Button onClick={() => navigate({ name: 'campaign', id: gift.campaignId })}>{t('gift.view')}</Button>}
         <Button variant="ghost" onClick={() => navigate({ name: 'discover' })}>Back to Discover</Button>
       </div>
     </main>
@@ -132,6 +134,7 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
 // The 7-day refund promised on the timeline (supabase request-refund).
 const REFUND_DAYS = 7
 function Refund({ gift, live, updateGift }) {
+  const t = useT()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const age = (Date.now() - new Date(gift.timestamp).getTime()) / 86_400_000
@@ -158,13 +161,13 @@ function Refund({ gift, live, updateGift }) {
   }
   return (
     <section style={{ marginTop: 48 }}>
-      <Label style={{ marginBottom: 16 }}>Changed your mind?</Label>
+      <Label style={{ marginBottom: 16 }}>{t('gift.changed')}</Label>
       <p style={{ fontSize: type.sm.fontSize, lineHeight: 1.7, color: colors.inkSoft }}>
         You can ask for a full refund for {daysLeft} more day{daysLeft === 1 ? '' : 's'}. It goes back the way you paid.
       </p>
       {error && <p role="alert" style={{ fontSize: type.sm.fontSize, color: colors.fundLow, marginTop: 12 }}>{error}</p>}
       <div style={{ marginTop: 16 }}>
-        <Button variant="ghost" onClick={ask} disabled={busy}>{busy ? 'Asking…' : 'Ask for a refund'}</Button>
+        <Button variant="ghost" onClick={ask} disabled={busy}>{busy ? 'Asking…' : t('gift.refund')}</Button>
       </div>
     </section>
   )
@@ -183,6 +186,7 @@ function supportNote(gift) {
 
 // A monthly gift: whether it is running, how each month is paid, and a way to stop it.
 function MonthlyGift({ gift, live, updateGift }) {
+  const t = useT()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const plan = gift.plan || { status: gift.live ? 'pending' : 'active', method: gift.momo ? 'momo' : 'card' }
@@ -207,7 +211,7 @@ function MonthlyGift({ gift, live, updateGift }) {
   }
   return (
     <section style={{ marginTop: 48 }}>
-      <Label style={{ marginBottom: 16 }}>Monthly gift</Label>
+      <Label style={{ marginBottom: 16 }}>{t('gift.monthly')}</Label>
       <p style={{ fontSize: type.sm.fontSize, lineHeight: 1.7, color: colors.inkSoft }}>
         {running
           ? <>{how} {plan.status === 'pending' ? 'It starts once this first gift is confirmed.' : next ? `Next: ${next}.` : ''}</>
@@ -217,7 +221,7 @@ function MonthlyGift({ gift, live, updateGift }) {
       {error && <p role="alert" style={{ fontSize: type.sm.fontSize, color: colors.fundLow, marginTop: 12 }}>{error}</p>}
       {running && (live ? gift.planToken : true) && (
         <div style={{ marginTop: 16 }}>
-          <Button variant="ghost" onClick={stop} disabled={busy}>{busy ? 'Stopping…' : 'Stop monthly gift'}</Button>
+          <Button variant="ghost" onClick={stop} disabled={busy}>{busy ? 'Stopping…' : t('gift.stop')}</Button>
         </div>
       )}
     </section>

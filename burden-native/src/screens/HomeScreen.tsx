@@ -151,7 +151,7 @@ function SectionTitle({ label, cta, onCta }: { label: string; cta?: string; onCt
     <View style={styles.sectionTitle}>
       <Label>{label}</Label>
       {cta && (
-        <Pressable onPress={onCta}>
+        <Pressable onPress={onCta} accessibilityRole="button" hitSlop={8}>
           <Text style={styles.ctaText}>{cta.toUpperCase()} →</Text>
         </Pressable>
       )}

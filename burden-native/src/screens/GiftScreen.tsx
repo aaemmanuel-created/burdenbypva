@@ -12,9 +12,11 @@ import { useGifts } from '../context/GiftsContext';
 import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout, requestRefund } from '../lib/payments';
 import { settleDemoGift } from '../lib/giftTimeline';
 import { campaigns, churches, type Gift, type GiftStatus } from '../data/mock';
+import { registerForPush } from '../lib/push';
 import { ShareSheet } from '../components/Community';
 import { findFundraiser } from '../lib/community';
 import type { RootStackParamList } from '../navigation/types';
+import { useT } from '../lib/i18n';
 
 const POLL_MS = 4000;
 const POLL_FOR_MS = 3 * 60_000;
@@ -22,6 +24,7 @@ const POLL_FOR_MS = 3 * 60_000;
 type Props = NativeStackScreenProps<RootStackParamList, 'Gift'>;
 
 export default function GiftScreen({ route, navigation }: Props) {
+  const t = useT();
   const { gifts, recordGift, updateGift, fundraisers } = useGifts();
   const id = route.params.giftId ?? route.params.gift ?? '';
   const returnToken = route.params.t;
@@ -43,6 +46,9 @@ export default function GiftScreen({ route, navigation }: Props) {
 
   const token = stored?.token ?? returnToken;
   const live = Boolean(stored?.live && liveCheckout && token);
+
+  // After a live gift: ask once to send this phone the gift's news.
+  useEffect(() => { if (live) registerForPush(gifts); }, [live]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!live || !token) return;
@@ -82,7 +88,7 @@ export default function GiftScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
-      <Label>Your gift</Label>
+      <Label>{t('gift.label')}</Label>
       <Text style={styles.h1}>
         {gift.amount ? `${formatMoney(gift.amount)} to ${gift.churchName}` : 'Your gift'}
       </Text>
@@ -101,7 +107,7 @@ export default function GiftScreen({ route, navigation }: Props) {
         {gift.testMode || !gift.live ? ' · Test only — no real money moved' : ''}
       </Text>
 
-      <Label style={{ marginTop: 32, marginBottom: 20 }}>Progress</Label>
+      <Label style={{ marginTop: 32, marginBottom: 20 }}>{t('gift.progress')}</Label>
       <Timeline gift={gift} />
       {gift.status === 'initiated' && live ? (
         <Text style={[styles.sub, { marginTop: 20 }]}>Checking with the payment provider…</Text>
@@ -125,14 +131,14 @@ export default function GiftScreen({ route, navigation }: Props) {
           <Button onPress={() => navigation.replace('Give', { campaignId: gift.campaignId })}>Try again</Button>
         ) : gift.campaignId ? (
           <Button onPress={() => navigation.navigate('Campaign', { campaignId: gift.campaignId })}>
-            View the burden
+            {t('gift.view')}
           </Button>
         ) : null}
         {!declined && campaign && (
-          <Button variant="ghost" onPress={() => setSharing(true)}>Share this burden</Button>
+          <Button variant="ghost" onPress={() => setSharing(true)}>{t('share.title')}</Button>
         )}
         <Button variant="ghost" onPress={() => navigation.navigate('Tabs', { screen: 'Giving' })}>
-          Giving history
+          {t('gift.history')}
         </Button>
       </View>
       {campaign && church && (
@@ -152,6 +158,7 @@ export default function GiftScreen({ route, navigation }: Props) {
 // The 7-day refund promised on the timeline (supabase request-refund).
 const REFUND_DAYS = 7;
 function Refund({ gift, live }: { gift: Gift; live: boolean }) {
+  const t = useT();
   const { updateGift } = useGifts();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -182,13 +189,13 @@ function Refund({ gift, live }: { gift: Gift; live: boolean }) {
   ]);
   return (
     <View style={{ marginTop: 32 }}>
-      <Label style={{ marginBottom: 12 }}>Changed your mind?</Label>
+      <Label style={{ marginBottom: 12 }}>{t('gift.changed')}</Label>
       <Text style={styles.body}>
         You can ask for a full refund for {daysLeft} more day{daysLeft === 1 ? '' : 's'}. It goes back the way you paid.
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button variant="ghost" style={{ marginTop: 14 }} onPress={ask} disabled={busy}>
-        {busy ? 'Asking…' : 'Ask for a refund'}
+        {busy ? 'Asking…' : t('gift.refund')}
       </Button>
     </View>
   );
@@ -207,6 +214,7 @@ function supportNote(gift: Gift): string {
 
 // A monthly gift: whether it is running, how each month is paid, and a way to stop it.
 function MonthlyGift({ gift, live }: { gift: Gift; live: boolean }) {
+  const t = useT();
   const { updateGift } = useGifts();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -232,7 +240,7 @@ function MonthlyGift({ gift, live }: { gift: Gift; live: boolean }) {
   }
   return (
     <View style={{ marginTop: 32 }}>
-      <Label style={{ marginBottom: 12 }}>Monthly gift</Label>
+      <Label style={{ marginBottom: 12 }}>{t('gift.monthly')}</Label>
       <Text style={styles.body}>
         {running
           ? `${how} ${plan.status === 'pending' ? 'It starts once this first gift is confirmed.' : next ? `Next: ${next}.` : ''}`
@@ -242,7 +250,7 @@ function MonthlyGift({ gift, live }: { gift: Gift; live: boolean }) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {running && (live ? Boolean(gift.planToken) : true) && (
         <Button variant="ghost" style={{ marginTop: 14 }} onPress={stop} disabled={busy}>
-          {busy ? 'Stopping…' : 'Stop monthly gift'}
+          {busy ? 'Stopping…' : t('gift.stop')}
         </Button>
       )}
     </View>

@@ -1,9 +1,10 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Label, Rule } from '../components/UI';
 import { DOCK_SPACE } from '../components/Dock';
 import { colors, font } from '../constants/theme';
 import { principles } from '../data/mock';
+import { LANGUAGES, useI18n } from '../lib/i18n';
 
 const TIERS = [
   { tier: 'Basic', desc: 'Identity-verified leadership, registered legal entity, capped at $5,000 monthly.' },
@@ -12,9 +13,20 @@ const TIERS = [
 ];
 
 export default function AboutScreen() {
+  const { t, lang, setLang } = useI18n();
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: DOCK_SPACE + 64 }}>
-      <Label>About</Label>
+      <Label>{t('lang.label')}</Label>
+      <View style={styles.langRow} accessibilityRole="radiogroup">
+        {Object.entries(LANGUAGES).map(([code, name]) => (
+          <Pressable key={code} onPress={() => setLang(code)} accessibilityRole="radio" accessibilityState={{ selected: lang === code }}
+            style={[styles.langChip, lang === code && { backgroundColor: colors.ink }]}>
+            <Text style={[styles.langText, lang === code && { color: colors.accentInk }]}>{name}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Rule style={{ marginVertical: 24 }} />
+      <Label>{t('nav.about')}</Label>
       <Text style={styles.h1}>A trustworthy way to give to the global church.</Text>
 
       <Text style={styles.body}>
@@ -67,6 +79,9 @@ export default function AboutScreen() {
 }
 
 const styles = StyleSheet.create({
+  langRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 12 },
+  langChip: { borderWidth: 1, borderColor: colors.rule, paddingVertical: 10, paddingHorizontal: 12 },
+  langText: { fontFamily: font.regular, fontSize: 12, color: colors.ink },
   h1: { fontFamily: font.regular, fontSize: 26, color: colors.ink, marginTop: 12, marginBottom: 24, lineHeight: 32 },
   body: { fontFamily: font.regular, fontSize: 13, lineHeight: 22, color: colors.inkSoft, marginBottom: 16 },
   principleRow: {

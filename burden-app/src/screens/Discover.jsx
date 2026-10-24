@@ -3,6 +3,7 @@ import { colors, font, type } from '../theme.js'
 import { Label, Rule } from '../components/UI.jsx'
 import BurdenTile from '../components/BurdenTile.jsx'
 import { campaigns, churches } from '../data/mock.js'
+import { useT } from '../lib/i18n.jsx'
 
 const CATEGORIES = ['All', 'Education', 'Health', 'Community', 'Building']
 const ALL = 'All'
@@ -28,6 +29,7 @@ function splitLocation(loc) {
 }
 
 export default function Discover({ navigate }) {
+  const t = useT()
   const [cat, setCat] = useState(ALL)
   const [region, setRegion] = useState(ALL)
   const [country, setCountry] = useState(ALL)
@@ -87,7 +89,9 @@ export default function Discover({ navigate }) {
       if (country !== ALL && co !== country) return false
       if (city !== ALL && ci !== city) return false
       if (query) {
-        const hay = (c.title + ' ' + c.summary + ' ' + ch.name + ' ' + ch.location).toLowerCase()
+        // Title, summary, objective, category, church, tradition, place and team names.
+        const hay = [c.title, c.summary, c.objective, c.category, ch.name, ch.location, ch.tradition,
+          ...(c.team || []).map(m => m.name)].join(' ').toLowerCase()
         if (!hay.includes(query.toLowerCase())) return false
       }
       return true
@@ -102,9 +106,9 @@ export default function Discover({ navigate }) {
 
   return (
     <main style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 28px 0' }}>
-      <Label>Discover</Label>
+      <Label>{t('discover.label')}</Label>
       <h1 style={{ fontFamily: font.sans, fontSize: type['3xl'].fontSize, fontWeight: 400, letterSpacing: '-1%', marginTop: 14, marginBottom: 36 }}>
-        Verified burdens.
+        {t('discover.title')}
       </h1>
 
       {/* Category chips */}
@@ -129,7 +133,7 @@ export default function Discover({ navigate }) {
               fontWeight: 500,
               cursor: 'pointer',
             }}
-          >{c}</button>
+          >{t(`cat.${c}`)}</button>
         ))}
       </div>
 
@@ -160,7 +164,7 @@ export default function Discover({ navigate }) {
         />
         <input
           type="text"
-          placeholder="Search churches and burdens…"
+          placeholder={t('discover.search')}
           value={query}
           onChange={e => setQuery(e.target.value)}
           style={{

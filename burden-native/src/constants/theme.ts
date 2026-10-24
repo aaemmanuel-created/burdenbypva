@@ -7,7 +7,7 @@ export const colors = {
   bgAlt: '#ecebe5',
   ink: '#0a0a0a',
   inkSoft: '#4a4a4a',
-  inkMuted: '#8a8a85',
+  inkMuted: '#676762', // was #8a8a85 (3.2:1) — darkened 2026-10-24 for WCAG AA 4.5:1
   rule: '#1a1a1a',
   ruleSoft: '#d8d6cf',
   accent: '#1a1a1a',
@@ -19,17 +19,17 @@ export const colors = {
 
   // Glassy navy tile palette — used for cards, tiles, surfaces that should "pop".
   navy:      '#3a69ad',   // lightened 2026-10-17 — was #0b1a35 (too dark on phone)
-  navyTop:   '#5a8bd1',   // tile gradient: light top …
+  navyTop:   '#3563a6',   // tile gradient top — was #5a8bd1; darkened 2026-10-25 for WCAG AA text contrast
   navyBottom:'#2d5797',   // … to deeper bottom
   navyDeep:  '#050c1d',
   navyEdge:  '#6b95d3',
   navyInk:   '#eef2fb',
   navySoft:  '#e8eef9',
-  navyMuted: '#cfdcf2',
+  navyMuted: '#ebf0fa',   // was #cfdcf2 — now ≥4.5:1 on every part of the tile
   navyRule:  'rgba(255,255,255,0.10)',
 
   // Funding banner tones
-  fundLow:  '#c44a3e',
+  fundLow:  '#b8433a', // was #c44a3e (4.4:1) — WCAG AA
   fundMid:  '#e09a2d',   // amber
   fundHigh: '#3f8a5a',
 } as const;

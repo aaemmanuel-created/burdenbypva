@@ -7,9 +7,10 @@ import { Badge, Button, FundingSquare, Label, Progress, Rule, Tile } from '../co
 import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '../components/Community';
 import { colors, font, formatMoney, tile } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
-import { findFundraiser, fundraisersFor, supportFor, updatesFor, type SupportWord } from '../lib/community';
-import { fetchSupportWords, liveCheckout } from '../lib/payments';
+import { findFundraiser, fundraisersFor, supportFor, updatesFor, type SupportWord, type Update } from '../lib/community';
+import { fetchBurdenUpdates, fetchSupportWords, liveCheckout } from '../lib/payments';
 import type { RootStackParamList } from '../navigation/types';
+import { useT } from '../lib/i18n';
 
 const ITEMS = [
   { label: 'Direct programme costs', share: 0.84 },
@@ -21,16 +22,21 @@ const ITEMS = [
 type Props = NativeStackScreenProps<RootStackParamList, 'Campaign'>;
 
 export default function CampaignScreen({ route, navigation }: Props) {
+  const t = useT();
   const { gifts, fundraisers, joinedPrayer, togglePrayer } = useGifts();
   const [sharing, setSharing] = useState(false);
   // Live: only words the review queue approved (null until loaded / in demo).
   const [liveWords, setLiveWords] = useState<SupportWord[] | null>(null);
+  const [liveUpdates, setLiveUpdates] = useState<Update[] | null>(null); // posted from the church dashboard
   useEffect(() => {
     if (!liveCheckout) return;
     let stop = false;
     fetchSupportWords(route.params.campaignId)
       .then((r) => { if (!stop) setLiveWords(r.words); })
       .catch(() => { if (!stop) setLiveWords([]); });
+    fetchBurdenUpdates(route.params.campaignId)
+      .then((r) => { if (!stop) setLiveUpdates(r.updates); })
+      .catch(() => { if (!stop) setLiveUpdates([]); });
     return () => { stop = true; };
   }, [route.params.campaignId]);
   const scroll = useRef<ScrollView>(null);
@@ -45,7 +51,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
   }
   const church = churches.find((ch) => ch.id === campaign.churchId)!;
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
-  const updates = updatesFor(campaign.id);
+  const updates = liveUpdates ?? updatesFor(campaign.id);
   const words = supportFor(campaign.id, gifts, liveWords);
   const carrying = fundraisersFor(campaign.id, fundraisers, gifts);
   const sharedFundraiser = findFundraiser(fundraiserId, fundraisers);
@@ -54,7 +60,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
     <ScrollView ref={scroll} style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 96 }}>
       <View style={{ padding: 20 }}>
         <View style={styles.badgeRow}>
-          <Badge>{campaign.category}</Badge>
+          <Badge>{t(`cat.${campaign.category}`)}</Badge>
           {church.verified && <Badge tone="trust">{church.tier}</Badge>}
         </View>
         <Text style={styles.title}>{campaign.title}</Text>
@@ -70,35 +76,34 @@ export default function CampaignScreen({ route, navigation }: Props) {
       <View style={{ padding: 20 }}>
         <Tile>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <Label onNavy>Funding</Label>
+            <Label onNavy>{t('campaign.funding')}</Label>
             <FundingSquare raised={campaign.raised} goal={campaign.goal} size={18} />
           </View>
           <Progress value={campaign.raised} goal={campaign.goal} onNavy />
           <View style={styles.giveStats}>
             <View>
               <Text style={styles.giveAmount}>{formatMoney(campaign.raised)}</Text>
-              <Text style={styles.giveSub}>of {formatMoney(campaign.goal)} ({pct}%)</Text>
+              <Text style={styles.giveSub}>{t('campaign.of', { goal: formatMoney(campaign.goal), pct })}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.giveCount}>{campaign.donors}</Text>
-              <Text style={styles.giveSub}>donors</Text>
+              <Text style={styles.giveSub}>{t('campaign.donors')}</Text>
             </View>
           </View>
           <Button variant="onNavy" onPress={() => navigation.navigate('Give', { campaignId: campaign.id, fundraiserId: sharedFundraiser?.id })}>
             {sharedFundraiser
               ? `Give through ${sharedFundraiser.own ? 'your page' : sharedFundraiser.name.split(' ')[0]}`
-              : 'Carry this burden — give'}
+              : t('campaign.give')}
           </Button>
           <Pressable
             onPress={() => setSharing(true)}
             accessibilityRole="button"
             style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.7 }]}
           >
-            <Text style={styles.shareBtnText}>SHARE</Text>
+            <Text style={styles.shareBtnText}>{t('campaign.share').toUpperCase()}</Text>
           </Pressable>
           <Text style={styles.giveNote}>
-            Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
-            Anonymous and recurring options available at checkout.
+            {t('campaign.minimum')}
           </Text>
         </Tile>
       </View>
@@ -106,7 +111,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
       <Rule soft />
 
       <View style={{ padding: 20 }}>
-        <Label>About this burden</Label>
+        <Label>{t('campaign.about')}</Label>
         {/* Four lines at most — the detail lives in the sections below. */}
         <Text style={styles.body} numberOfLines={4}>
           {campaign.summary} Funds go straight to the church's verified payout account, with a
@@ -125,7 +130,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
         <>
           <Rule soft />
           <View style={{ paddingTop: 20, paddingBottom: 8 }}>
-            <Label style={{ paddingHorizontal: 20 }}>Profiles</Label>
+            <Label style={{ paddingHorizontal: 20 }}>{t('campaign.profiles')}</Label>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -141,21 +146,21 @@ export default function CampaignScreen({ route, navigation }: Props) {
 
       {/* The four sections every burden shows (web: Campaign.jsx) */}
       <View style={{ padding: 20 }}>
-        <Label>Objective</Label>
+        <Label>{t('campaign.objective')}</Label>
         <Text style={[styles.body, { color: colors.ink }]}>{campaign.objective}</Text>
       </View>
 
       <Rule soft />
 
       <View style={{ padding: 20 }}>
-        <Label>Current state</Label>
+        <Label>{t('campaign.state')}</Label>
         <Text style={styles.body}>{campaign.currentState}</Text>
       </View>
 
       <Rule soft />
 
       <View style={{ padding: 20 }}>
-        <Label>How the money moves</Label>
+        <Label>{t('campaign.money')}</Label>
         <View style={{ marginTop: 14 }}>
           {campaign.moneyWorkflow.map((step, i) => (
             <View key={i} style={styles.flowRow}>
@@ -202,7 +207,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
       <Rule soft />
 
       <View style={{ padding: 20 }}>
-        <Label>Where every dollar goes</Label>
+        <Label>{t('campaign.dollar')}</Label>
         <View style={{ marginTop: 14 }}>
           {ITEMS.map((it) => (
             <View key={it.label} style={styles.itemRow}>
@@ -223,7 +228,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
       <Rule soft />
 
       <View style={{ padding: 20 }}>
-        <Label>About {church.name}</Label>
+        <Label>{t('campaign.aboutChurch', { church: church.name })}</Label>
         <Text style={styles.body}>
           {church.summary} Founded {church.founded}. {church.tradition}. Led by {church.leadership}.
         </Text>
@@ -247,11 +252,12 @@ export default function CampaignScreen({ route, navigation }: Props) {
 function PrayerGroup({
   group, joined, onToggle,
 }: { group: { members: number; recentPrayers: number; focusLine: string }; joined: boolean; onToggle: () => void }) {
+  const t = useT();
   const members = group.members + (joined ? 1 : 0);
   return (
     <View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-        <Label>Prayer group</Label>
+        <Label>{t('campaign.prayer')}</Label>
         <Text style={styles.prayerCount}>
           {members.toLocaleString()} praying · {group.recentPrayers} prayers this week
         </Text>
@@ -263,7 +269,7 @@ function PrayerGroup({
         substitute for giving; it sits alongside it.
       </Text>
       <Button variant={joined ? 'ghost' : 'primary'} style={{ marginTop: 18, alignSelf: 'flex-start' }} onPress={onToggle}>
-        {joined ? 'You are in this prayer group ✓' : 'Join the prayer group'}
+        {joined ? t('campaign.inPrayer') : t('campaign.joinPrayer')}
       </Button>
     </View>
   );

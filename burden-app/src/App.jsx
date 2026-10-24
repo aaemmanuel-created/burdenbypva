@@ -13,6 +13,7 @@ import About from './screens/About.jsx'
 import GiftDetail from './screens/GiftDetail.jsx'
 import Fundraise from './screens/Fundraise.jsx'
 import Poster from './screens/Poster.jsx'
+import Church from './screens/Church.jsx'
 import { takeCheckoutReturn } from './lib/payments.js'
 import { isGiven, settleDemoGift } from './lib/giftTimeline.js'
 import { takeShareLink } from './lib/community.js'
@@ -35,6 +36,19 @@ function loadGifts() {
 
 // Fundraisers the donor starts are kept beside their gifts.
 const FUNDRAISERS_KEY = 'burden-fundraisers-v1'
+// Church dashboard demo (no server): updates posted and payout accounts
+// submitted in this browser.
+const CHURCH_UPDATES_KEY = 'burden-church-updates-v1'
+const CHURCH_PAYOUTS_KEY = 'burden-church-payouts-v1'
+
+function loadJson(key, fallback) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key) || 'null')
+    return v ?? fallback
+  } catch {
+    return fallback
+  }
+}
 
 function loadFundraisers() {
   try {
@@ -79,6 +93,16 @@ export default function App() {
   const addFundraiser = useCallback((f) => {
     setFundraisers(prev => [f, ...prev])
   }, [])
+  const [churchUpdates, setChurchUpdates] = useState(() => loadJson(CHURCH_UPDATES_KEY, []))
+  const [demoPayouts, setDemoPayouts] = useState(() => loadJson(CHURCH_PAYOUTS_KEY, {}))
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHURCH_UPDATES_KEY, JSON.stringify(churchUpdates))
+      localStorage.setItem(CHURCH_PAYOUTS_KEY, JSON.stringify(demoPayouts))
+    } catch { /* private mode */ }
+  }, [churchUpdates, demoPayouts])
+  const addChurchUpdate = useCallback((u) => setChurchUpdates(prev => [u, ...prev]), [])
+  const setDemoPayout = useCallback((churchId, p) => setDemoPayouts(prev => ({ ...prev, [churchId]: p })), [])
   const [joinedPrayerGroups, setJoinedPrayerGroups] = useState(new Set())
   const [creditBalance, setCreditBalance] = useState(0)
   const [donorName, setDonorName] = useState('')
@@ -142,6 +166,18 @@ export default function App() {
         gifts={gifts}
         fundraisers={fundraisers}
         fundraiserId={route.fundraiserId}
+        churchUpdates={churchUpdates}
+      />
+    ); break
+    case 'church':   screen = (
+      <Church
+        navigate={navigate}
+        gifts={gifts}
+        updateGift={updateGift}
+        churchUpdates={churchUpdates}
+        addChurchUpdate={addChurchUpdate}
+        demoPayouts={demoPayouts}
+        setDemoPayout={setDemoPayout}
       />
     ); break
     case 'give':     screen = (
@@ -190,7 +226,7 @@ export default function App() {
     <>
       <Header navigate={navigate} creditBalance={creditBalance} />
       {screen}
-      <Footer />
+      <Footer navigate={navigate} />
       <Dock route={route} navigate={navigate} givingCount={givenGifts.length} />
     </>
   )

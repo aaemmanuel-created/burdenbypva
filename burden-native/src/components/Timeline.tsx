@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors, font } from '../constants/theme';
 import { buildTimeline, type StepState } from '../lib/giftTimeline';
 import type { Gift } from '../data/mock';
+import { useT } from '../lib/i18n';
 
 const DOT = 14;
 
@@ -32,6 +33,7 @@ function Dot({ state }: { state: StepState }) {
 }
 
 export default function Timeline({ gift }: { gift: Gift }) {
+  const t = useT();
   const steps = buildTimeline(gift);
   return (
     <View accessibilityLabel="Gift progress">
@@ -57,7 +59,7 @@ export default function Timeline({ gift }: { gift: Gift }) {
                   styles.label,
                   muted && { color: colors.inkSoft },
                   s.state === 'failed' && { color: colors.fundLow },
-                ]}>{s.label}</Text>
+                ]}>{t(s.label === 'Payment declined' ? 'tl.declined' : s.label === 'Checkout not completed' ? 'tl.notCompleted' : `tl.${s.key}`)}</Text>
                 {s.time ? <Text style={styles.time}>{s.time}</Text> : null}
               </View>
               {s.detail ? (

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { colors, tile } from '../theme.js'
 import { Button, Label, Progress, Tile, formatMoney } from './UI.jsx'
 import { formatDay, shareText, shareUrl } from '../lib/community.js'
+import { useT } from '../lib/i18n.jsx'
 
 // The burden page's community sections — Updates, Words of support,
 // Fundraisers — and the Share sheet. Web twins of
@@ -25,11 +26,12 @@ function SectionHead({ label, count }) {
 
 // Dated posts from the burden's team — newest open, older ones folded.
 export function UpdatesSection({ updates }) {
+  const t = useT()
   const [all, setAll] = useState(false)
   const shown = all ? updates : updates.slice(0, 1)
   return (
     <div>
-      <SectionHead label="Updates" count={updates.length} />
+      <SectionHead label={t('campaign.updates')} count={updates.length} />
       {updates.length === 0 && (
         <p style={body}>The team posts a public update every month. The first is on its way.</p>
       )}
@@ -37,7 +39,7 @@ export function UpdatesSection({ updates }) {
         <article key={u.date + u.title} style={{
           padding: '18px 0', borderBottom: i < shown.length - 1 ? '1px solid ' + colors.ruleSoft : 'none',
         }}>
-          <div style={meta}>{formatDay(u.date)} · {u.author}, {u.role}</div>
+          <div style={meta}>{formatDay(u.date)} · {u.author}{u.role ? `, ${u.role}` : ''}</div>
           <h3 style={{ marginTop: 8, fontSize: 16, fontWeight: 600, lineHeight: 1.4, color: colors.ink }}>{u.title}</h3>
           <p style={body}>{u.body}</p>
         </article>
@@ -53,11 +55,12 @@ export function UpdatesSection({ updates }) {
 
 // Messages givers leave with their gifts. Never the amount.
 export function SupportSection({ words, onGive }) {
+  const t = useT()
   const [all, setAll] = useState(false)
   const shown = all ? words : words.slice(0, 3)
   return (
     <div>
-      <SectionHead label="Words of support" count={words.length} />
+      <SectionHead label={t('campaign.support')} count={words.length} />
       <p style={{ ...body, fontSize: 12, color: colors.inkMuted }}>
         Givers can leave a few words or a prayer with their gift. Every message is checked before it appears,
         and amounts are never shown.
@@ -85,9 +88,10 @@ export function SupportSection({ words, onGive }) {
 
 // People carrying this burden with their own circle.
 export function FundraisersSection({ fundraisers, highlightId, onGiveThrough, onStart }) {
+  const t = useT()
   return (
     <div>
-      <SectionHead label="Carrying it with others" count={fundraisers.length} />
+      <SectionHead label={t('campaign.carrying')} count={fundraisers.length} />
       <p style={{ ...body, fontSize: 12, color: colors.inkMuted }}>
         Anyone can raise for this burden among their own friends. Every gift still goes straight
         to the church's verified account.
@@ -115,7 +119,7 @@ export function FundraisersSection({ fundraisers, highlightId, onGiveThrough, on
         ))}
       </div>
       <div style={{ marginTop: 20 }}>
-        <Button variant="ghost" onClick={onStart}>Fundraise for this burden</Button>
+        <Button variant="ghost" onClick={onStart}>{t('campaign.fundraise')}</Button>
       </div>
     </div>
   )
@@ -123,6 +127,7 @@ export function FundraisersSection({ fundraisers, highlightId, onGiveThrough, on
 
 // Copy link, WhatsApp, Email, and the device's own share menu where there is one.
 export function ShareOptions({ campaign, church, fundraiser, onPoster }) {
+  const t = useT()
   const url = shareUrl(campaign.id, fundraiser?.id)
   const text = shareText(campaign, church, fundraiser)
   const [copied, setCopied] = useState(false)
@@ -143,7 +148,7 @@ export function ShareOptions({ campaign, church, fundraiser, onPoster }) {
   }
   return (
     <div>
-      <Label>Your link</Label>
+      <Label>{t('share.link')}</Label>
       <div style={{ display: 'flex', marginTop: 12, border: '1px solid ' + colors.rule }}>
         <input readOnly value={url} onFocus={e => e.target.select()} aria-label="Share link" style={{
           flex: 1, minWidth: 0, padding: '14px 16px', border: 'none', background: 'transparent',
@@ -152,23 +157,23 @@ export function ShareOptions({ campaign, church, fundraiser, onPoster }) {
         <button onClick={copy} style={{
           padding: '0 16px', border: 'none', borderLeft: '1px solid ' + colors.rule, cursor: 'pointer',
           background: colors.ink, color: colors.accentInk, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase',
-        }}>{copied ? 'Copied ✓' : 'Copy link'}</button>
+        }}>{copied ? t('share.copied') : t('share.copy')}</button>
       </div>
       <div style={{ marginTop: 16 }}>
         <a style={row} href={'https://wa.me/?text=' + encodeURIComponent(text + ' ' + url)} target="_blank" rel="noreferrer">
           WhatsApp <span aria-hidden>→</span>
         </a>
         <a style={row} href={'mailto:?subject=' + encodeURIComponent(campaign.title) + '&body=' + encodeURIComponent(text + '\n\n' + url)}>
-          Email <span aria-hidden>→</span>
+          {t('share.email')} <span aria-hidden>→</span>
         </a>
         {canShare && (
           <button style={row} onClick={() => navigator.share({ title: campaign.title, text, url }).catch(() => {})}>
-            More options <span aria-hidden>→</span>
+            {t('share.more')} <span aria-hidden>→</span>
           </button>
         )}
         {onPoster && (
           <button style={row} onClick={onPoster}>
-            QR poster for church <span aria-hidden>→</span>
+            {t('share.poster')} <span aria-hidden>→</span>
           </button>
         )}
       </div>
@@ -178,6 +183,7 @@ export function ShareOptions({ campaign, church, fundraiser, onPoster }) {
 
 // A sheet over the page, as GoFundMe's "Quick share", in BURDEN's paper and hairlines.
 export function ShareSheet({ open, onClose, campaign, church, fundraiser, onFundraise, onPoster }) {
+  const t = useT()
   useEffect(() => {
     if (!open) return
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -196,7 +202,7 @@ export function ShareSheet({ open, onClose, campaign, church, fundraiser, onFund
         borderTop: '1px solid ' + colors.rule, maxHeight: '88vh', overflowY: 'auto', boxSizing: 'border-box',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <span style={{ fontSize: 18, fontWeight: 600, color: colors.ink }}>Share this burden</span>
+          <span style={{ fontSize: 18, fontWeight: 600, color: colors.ink }}>{t('share.title')}</span>
           <button onClick={onClose} aria-label="Close" style={{
             background: 'transparent', border: 'none', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: colors.ink,
           }}>×</button>
@@ -204,12 +210,12 @@ export function ShareSheet({ open, onClose, campaign, church, fundraiser, onFund
         <ShareOptions campaign={campaign} church={church} fundraiser={fundraiser} onPoster={onPoster} />
         {onFundraise && (
           <div style={{ marginTop: 28 }}>
-            <Label>Carry it further</Label>
+            <Label>{t('share.further')}</Label>
             <p style={{ ...body, fontSize: 13 }}>
               Start your own page for this burden and invite your friends, church or colleagues to give through it.
             </p>
             <div style={{ marginTop: 16 }}>
-              <Button full onClick={onFundraise}>Fundraise for this burden</Button>
+              <Button full onClick={onFundraise}>{t('campaign.fundraise')}</Button>
             </div>
           </div>
         )}

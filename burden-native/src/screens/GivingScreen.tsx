@@ -73,6 +73,7 @@ export default function GivingScreen({ navigation }: { navigation: Nav }) {
       renderItem={({ item }) => (
         <Pressable
           onPress={() => navigation.navigate('Gift', { giftId: item.id })}
+          accessibilityRole="button"
           style={styles.giftRow}
         >
           <View style={{ flex: 1 }}>

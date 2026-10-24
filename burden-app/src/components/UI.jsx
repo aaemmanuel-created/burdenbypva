@@ -54,7 +54,8 @@ export function Button({ children, onClick, variant = 'primary', disabled, style
     ...style,
   }
   return (
-    <button type={htmlType} onClick={onClick} style={base}>{children}</button>
+    // A real disabled attribute: faded *and* unreachable by keyboard.
+    <button type={htmlType} onClick={onClick} disabled={disabled} style={base}>{children}</button>
   )
 }
 

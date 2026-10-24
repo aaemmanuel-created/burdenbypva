@@ -13,7 +13,9 @@ export default function BurdenTile({ campaign, church, onOpen, highlight = false
   return (
     <Tile
       as={highlight ? 'div' : 'button'}
-      onClick={onOpen}
+      // The highlight card has its own "View burden" button, so the card itself
+      // isn't a second control (WCAG: no interactive element inside another).
+      onClick={highlight ? undefined : onOpen}
       padding={highlight ? 28 : 20}
       minHeight={hasPhoto ? undefined : highlight ? 320 : 220}
       image={campaign.image}
