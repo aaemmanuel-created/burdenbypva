@@ -2,9 +2,12 @@
 // and the one place a provider's answer turns into a timeline step.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import type { ChargeConfig, Provider } from './gift-input.ts';
-import { sha256Hex, timingSafeEqual } from './crypto.ts';
+import type { ChargeConfig, GiftInput, Provider } from './gift-input.ts';
+import { randomToken, sha256Hex, timingSafeEqual } from './crypto.ts';
 import { type GiftRow, type Secrets, type Verification, verify } from './providers.ts';
+import { activatePlan, createPlan } from './plans.ts';
+import { reviewSupportMessage } from './support.ts';
+import { sendReceipt } from './duties.ts';
 
 const env = (name: string) => Deno.env.get(name) ?? undefined;
 
@@ -81,8 +84,39 @@ export type FullGift = GiftRow & {
   return_url: string;
   hold_until: string | null;
   test_mode: boolean;
+  plan_id?: string | null;
+  momo_phone?: string | null;
+  momo_network?: string | null;
+  receipt_sent_at?: string | null;
+  sms_sent_at?: string | null;
   [key: string]: unknown;
 };
+
+// Record a new gift (and, for a monthly gift, its plan). Shared by
+// create-gift (hosted checkout) and momo-charge (approve on your phone).
+export async function insertGift(
+  input: GiftInput, testMode: boolean, extra: Record<string, unknown> = {},
+  giftAid: Record<string, unknown> | null = null,
+) {
+  const token = randomToken();
+  const { data: id, error } = await db.rpc('create_gift', {
+    p_gift: { ...input, access_token_hash: await sha256Hex(token), test_mode: testMode },
+  });
+  if (error) throw error;
+  if (Object.keys(extra).length) await db.from('gifts').update(extra).eq('id', id);
+  if (input.message) {
+    await db.from('support_messages').insert({
+      gift_id: id, campaign_id: input.campaign_id, message: input.message,
+      display_name: input.anonymous ? 'Anonymous' : (input.donor_name ?? 'Anonymous'),
+    });
+  }
+  if (giftAid) {
+    await db.from('gift_aid_declarations').insert({ gift_id: id, ...giftAid });
+    await db.from('gifts').update({ gift_aid: true }).eq('id', id);
+  }
+  const plan = input.recurring ? await createPlan(input, id as string) : null;
+  return { gift: (await loadGift(id as string))!, token, plan };
+}
 
 export async function loadGift(id: string): Promise<FullGift | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
@@ -116,12 +150,20 @@ export async function applyVerification(gift: FullGift, v: Verification, source:
     const holdUntil = new Date(Date.now() + HOLD_HOURS * 3600_000).toISOString();
     let note = `${money(gift.charge_amount_minor, gift.charge_currency)} charged`;
     if (gift.charge_currency !== 'USD') {
-      note += ` at 1 USD = ${gift.fx_rate} ${gift.charge_currency}${gift.test_mode ? ' (test rate)' : ''}`;
+      // The rate and where it came from (duties.ts chargeNow) — passed through, no margin.
+      const source = (gift.fx_source as string | null) ?? (gift.test_mode ? 'test rate' : null);
+      note += ` at 1 USD = ${gift.fx_rate} ${gift.charge_currency}${source ? ` (${source})` : ''}`;
     }
     if (gift.test_mode) note += ' · Test payment, no real money';
-    await transition(gift.id, 'held', note + '.', source, {
+    const moved = await transition(gift.id, 'held', note + '.', source, {
       provider_ref: v.providerRef, payment_method: v.method, hold_until: holdUntil,
     });
+    // The first gift of a monthly plan switches the plan on.
+    if (moved && gift.plan_id) await activatePlan(gift, v);
+    // Only givers' words are published, and only after the review queue.
+    if (moved) await reviewSupportMessage(gift.id);
+    // One receipt per gift: email, or SMS for USSD givers.
+    if (moved) await sendReceipt((await loadGift(gift.id))!);
   } else if (v.outcome === 'failed') {
     await transition(gift.id, 'failed', v.reason, source);
   } else if (v.outcome === 'cancelled') {

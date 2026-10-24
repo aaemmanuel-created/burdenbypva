@@ -1,10 +1,14 @@
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { campaigns, churches, type TeamMember } from '../data/mock';
 import { Badge, Button, FundingSquare, Label, Progress, Rule, Tile } from '../components/UI';
+import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '../components/Community';
 import { colors, font, formatMoney, tile } from '../constants/theme';
+import { useGifts } from '../context/GiftsContext';
+import { findFundraiser, fundraisersFor, supportFor, updatesFor, type SupportWord } from '../lib/community';
+import { fetchSupportWords, liveCheckout } from '../lib/payments';
 import type { RootStackParamList } from '../navigation/types';
 
 const ITEMS = [
@@ -17,6 +21,20 @@ const ITEMS = [
 type Props = NativeStackScreenProps<RootStackParamList, 'Campaign'>;
 
 export default function CampaignScreen({ route, navigation }: Props) {
+  const { gifts, fundraisers, joinedPrayer, togglePrayer } = useGifts();
+  const [sharing, setSharing] = useState(false);
+  // Live: only words the review queue approved (null until loaded / in demo).
+  const [liveWords, setLiveWords] = useState<SupportWord[] | null>(null);
+  useEffect(() => {
+    if (!liveCheckout) return;
+    let stop = false;
+    fetchSupportWords(route.params.campaignId)
+      .then((r) => { if (!stop) setLiveWords(r.words); })
+      .catch(() => { if (!stop) setLiveWords([]); });
+    return () => { stop = true; };
+  }, [route.params.campaignId]);
+  const scroll = useRef<ScrollView>(null);
+  const { fundraiserId } = route.params;
   const campaign = campaigns.find((c) => c.id === route.params.campaignId);
   if (!campaign) {
     return (
@@ -27,9 +45,13 @@ export default function CampaignScreen({ route, navigation }: Props) {
   }
   const church = churches.find((ch) => ch.id === campaign.churchId)!;
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
+  const updates = updatesFor(campaign.id);
+  const words = supportFor(campaign.id, gifts, liveWords);
+  const carrying = fundraisersFor(campaign.id, fundraisers, gifts);
+  const sharedFundraiser = findFundraiser(fundraiserId, fundraisers);
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 96 }}>
+    <ScrollView ref={scroll} style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 96 }}>
       <View style={{ padding: 20 }}>
         <View style={styles.badgeRow}>
           <Badge>{campaign.category}</Badge>
@@ -62,9 +84,18 @@ export default function CampaignScreen({ route, navigation }: Props) {
               <Text style={styles.giveSub}>donors</Text>
             </View>
           </View>
-          <Button variant="onNavy" onPress={() => navigation.navigate('Give', { campaignId: campaign.id })}>
-            Carry this burden — give
+          <Button variant="onNavy" onPress={() => navigation.navigate('Give', { campaignId: campaign.id, fundraiserId: sharedFundraiser?.id })}>
+            {sharedFundraiser
+              ? `Give through ${sharedFundraiser.own ? 'your page' : sharedFundraiser.name.split(' ')[0]}`
+              : 'Carry this burden — give'}
           </Button>
+          <Pressable
+            onPress={() => setSharing(true)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.shareBtnText}>SHARE</Text>
+          </Pressable>
           <Text style={styles.giveNote}>
             Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
             Anonymous and recurring options available at checkout.
@@ -81,6 +112,13 @@ export default function CampaignScreen({ route, navigation }: Props) {
           {campaign.summary} Funds go straight to the church's verified payout account, with a
           public update every month.
         </Text>
+      </View>
+
+      <Rule soft />
+
+      {/* Updates — dated posts from the team */}
+      <View style={{ padding: 20 }}>
+        <UpdatesSection updates={updates} />
       </View>
 
       {campaign.team && campaign.team.length > 0 && (
@@ -101,6 +139,68 @@ export default function CampaignScreen({ route, navigation }: Props) {
 
       <Rule soft />
 
+      {/* The four sections every burden shows (web: Campaign.jsx) */}
+      <View style={{ padding: 20 }}>
+        <Label>Objective</Label>
+        <Text style={[styles.body, { color: colors.ink }]}>{campaign.objective}</Text>
+      </View>
+
+      <Rule soft />
+
+      <View style={{ padding: 20 }}>
+        <Label>Current state</Label>
+        <Text style={styles.body}>{campaign.currentState}</Text>
+      </View>
+
+      <Rule soft />
+
+      <View style={{ padding: 20 }}>
+        <Label>How the money moves</Label>
+        <View style={{ marginTop: 14 }}>
+          {campaign.moneyWorkflow.map((step, i) => (
+            <View key={i} style={styles.flowRow}>
+              <Text style={styles.flowNum}>{String(i + 1).padStart(2, '0')}</Text>
+              <Text style={styles.flowText}>{step}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <Rule soft />
+
+      <View style={{ padding: 20 }}>
+        <PrayerGroup
+          group={campaign.prayerGroup}
+          joined={joinedPrayer.includes(campaign.id)}
+          onToggle={() => togglePrayer(campaign.id)}
+        />
+      </View>
+
+      <Rule soft />
+
+      {/* Words of support — from givers, never with the amount */}
+      <View style={{ padding: 20 }}>
+        <SupportSection words={words} onGive={() => navigation.navigate('Give', { campaignId: campaign.id })} />
+      </View>
+
+      <Rule soft />
+
+      {/* Fundraisers — people carrying it with their own circle. A shared
+          fundraiser link lands here. */}
+      <View
+        style={{ padding: 20 }}
+        onLayout={(e) => { if (fundraiserId) scroll.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 120), animated: false }); }}
+      >
+        <FundraisersSection
+          fundraisers={carrying}
+          highlightId={fundraiserId}
+          onGiveThrough={(f) => navigation.navigate('Give', { campaignId: campaign.id, fundraiserId: f.id })}
+          onStart={() => navigation.navigate('Fundraise', { campaignId: campaign.id })}
+        />
+      </View>
+
+      <Rule soft />
+
       <View style={{ padding: 20 }}>
         <Label>Where every dollar goes</Label>
         <View style={{ marginTop: 14 }}>
@@ -115,6 +215,9 @@ export default function CampaignScreen({ route, navigation }: Props) {
           Donors may also cover BURDEN's platform fee at checkout, in which case 100% of the gift
           reaches the church net of payment processing.
         </Text>
+        <Text style={[styles.smallNote, { marginTop: 8 }]}>
+          Paid to {church.name}'s verified {church.payoutTo} after a 3-day hold.
+        </Text>
       </View>
 
       <Rule soft />
@@ -125,7 +228,44 @@ export default function CampaignScreen({ route, navigation }: Props) {
           {church.summary} Founded {church.founded}. {church.tradition}. Led by {church.leadership}.
         </Text>
       </View>
+
+      <ShareSheet
+        open={sharing}
+        onClose={() => setSharing(false)}
+        campaign={campaign}
+        church={church}
+        fundraiser={sharedFundraiser}
+        onFundraise={() => navigation.navigate('Fundraise', { campaignId: campaign.id })}
+        onPoster={() => navigation.navigate('Poster', { campaignId: campaign.id, fundraiserId: sharedFundraiser?.id })}
+      />
     </ScrollView>
+  );
+}
+
+// Prayer is specific: a focus line from the team, and a group to join.
+// Mirrors PrayerGroup in burden-app/src/screens/Campaign.jsx.
+function PrayerGroup({
+  group, joined, onToggle,
+}: { group: { members: number; recentPrayers: number; focusLine: string }; joined: boolean; onToggle: () => void }) {
+  const members = group.members + (joined ? 1 : 0);
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+        <Label>Prayer group</Label>
+        <Text style={styles.prayerCount}>
+          {members.toLocaleString()} praying · {group.recentPrayers} prayers this week
+        </Text>
+      </View>
+      <Text style={[styles.body, { color: colors.ink }]}>{group.focusLine}</Text>
+      <Text style={[styles.smallNote, { lineHeight: 18 }]}>
+        Prayer on BURDEN is specific — when you join this group you'll see weekly updates from the team on what to
+        pray for, and you can post prayers and short scriptures alongside other members of the group. Prayer is not a
+        substitute for giving; it sits alongside it.
+      </Text>
+      <Button variant={joined ? 'ghost' : 'primary'} style={{ marginTop: 18, alignSelf: 'flex-start' }} onPress={onToggle}>
+        {joined ? 'You are in this prayer group ✓' : 'Join the prayer group'}
+      </Button>
+    </View>
   );
 }
 
@@ -185,7 +325,19 @@ const styles = StyleSheet.create({
   giveSub: { fontFamily: font.regular, fontSize: 10, letterSpacing: 1, color: tile.muted, marginTop: 2 },
   giveCount: { fontFamily: font.bold, fontSize: 16, color: tile.ink },
   giveNote: { fontFamily: font.regular, fontSize: 10, lineHeight: 16, color: tile.muted, marginTop: 16 },
+  shareBtn: {
+    marginTop: 10, paddingVertical: 14, borderRadius: 10, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.55)',
+  },
+  shareBtnText: { fontFamily: font.bold, fontSize: 12, letterSpacing: 1, color: tile.ink },
   body: { fontFamily: font.regular, fontSize: 13, lineHeight: 22, color: colors.inkSoft, marginTop: 12 },
+  flowRow: {
+    flexDirection: 'row', gap: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: colors.ruleSoft,
+  },
+  flowNum: { width: 22, fontFamily: font.regular, fontSize: 12, letterSpacing: 1, color: colors.inkMuted, lineHeight: 21 },
+  flowText: { flex: 1, fontFamily: font.regular, fontSize: 13, lineHeight: 21, color: colors.ink },
+  prayerCount: { fontFamily: font.regular, fontSize: 11, letterSpacing: 1, color: colors.inkMuted, flexShrink: 1, textAlign: 'right' },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

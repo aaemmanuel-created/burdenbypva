@@ -43,14 +43,73 @@ async function call<T>(path: string, init: RequestInit): Promise<T> {
 }
 
 export function startCheckout(payload: Record<string, unknown>) {
-  return call<{ giftId: string; token: string; checkoutUrl: string; testMode: boolean }>('create-gift', {
+  return call<{
+    giftId: string; token: string; checkoutUrl: string; testMode: boolean; planId?: string; planToken?: string;
+  }>('create-gift', {
     method: 'POST',
     body: JSON.stringify({ ...payload, returnUrl: RETURN_URL }),
   });
 }
 
+// Approve on your phone (mobile money in Ghana) — the network sends the donor
+// a prompt and they approve with their PIN on the phone; BURDEN never sees it.
+export type MomoStart = {
+  giftId: string; token: string; testMode: boolean; planId?: string; planToken?: string;
+  state: 'approve' | 'otp' | 'paid' | 'failed'; message?: string;
+};
+export function startMomoCharge(payload: Record<string, unknown>) {
+  return call<MomoStart>('momo-charge', { method: 'POST', body: JSON.stringify({ ...payload, returnUrl: RETURN_URL }) });
+}
+
+// Some networks (Telecel vouchers) send a code first.
+export function submitMomoOtp(id: string, token: string, otp: string) {
+  return call<{ state: string; message?: string }>('momo-otp', {
+    method: 'POST', body: JSON.stringify({ gift: id, t: token, otp }),
+  });
+}
+
+// Stop a monthly gift with the plan token from the first gift.
+export function cancelMonthlyGift(planId: string, planToken: string) {
+  return call<{ ok: true }>('cancel-recurring', { method: 'POST', body: JSON.stringify({ plan: planId, t: planToken }) });
+}
+
+// Ghana numbers: 024 123 4567, +233 24 123 4567 → 0241234567 (as the server does).
+export function normaliseGhanaPhone(raw: string): string | null {
+  let d = raw.replace(/[\s\-().]/g, '');
+  if (d.startsWith('+')) d = d.slice(1);
+  if (d.startsWith('233')) d = '0' + d.slice(3);
+  return /^0[25]\d{8}$/.test(d) ? d : null;
+}
+
+export const MOMO_NETWORKS = [
+  { id: 'mtn', label: 'MTN MoMo' },
+  { id: 'telecel', label: 'Telecel Cash' },
+  { id: 'airteltigo', label: 'AirtelTigo Money' },
+] as const;
+export type MomoNetworkId = (typeof MOMO_NETWORKS)[number]['id'];
+
+// The USSD short code, once BURDEN rents one (e.g. "*713*55#"). Unset: not shown.
+export const USSD_CODE = process.env.EXPO_PUBLIC_BURDEN_USSD_CODE ?? '';
+
+// The 7-day refund.
+export function requestRefund(id: string, token: string) {
+  return call<{ ok: true }>('request-refund', { method: 'POST', body: JSON.stringify({ gift: id, t: token }) });
+}
+
+// Approved words of support for one burden (the review queue's public end).
+export function fetchSupportWords(campaignId: string) {
+  return call<{ words: { name: string; message: string; date: string }[] }>(
+    `support-messages?campaign=${encodeURIComponent(campaignId)}`, { method: 'GET' },
+  );
+}
+
 export function fetchGiftStatus(id: string, token: string) {
-  return call<{ gift: Record<string, any>; events: { step: string; occurred_at: string; note: string | null }[] }>(
+  return call<{
+    gift: Record<string, any>;
+    events: { step: string; occurred_at: string; note: string | null }[];
+    plan?: { status: string; note?: string | null; method?: string | null; nextChargeAt?: string | null } | null;
+    supportStatus?: string | null;
+  }>(
     `gift-status?gift=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`,
     { method: 'GET' },
   );

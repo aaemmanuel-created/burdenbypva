@@ -3,7 +3,7 @@ import { colors, font, type } from '../theme.js'
 import { Button, Label, formatMoney } from '../components/UI.jsx'
 import Timeline from '../components/Timeline.jsx'
 import { campaigns } from '../data/mock.js'
-import { PAYMENT_METHODS, fetchGiftStatus, liveCheckout } from '../lib/payments.js'
+import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout, requestRefund } from '../lib/payments.js'
 
 // One gift and where it has got to. Live gifts refresh from the server —
 // every few seconds while the payment is still being confirmed, once
@@ -27,10 +27,10 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
     const started = Date.now()
     async function refresh() {
       try {
-        const { gift: server, events } = await fetchGiftStatus(id, gift.token)
+        const { gift: server, events, plan, supportStatus } = await fetchGiftStatus(id, gift.token)
         if (stopped) return
         setError('')
-        updateGift(id, { ...server, events })
+        updateGift(id, { ...server, events, ...(plan ? { plan } : {}), supportStatus })
         if (server.status === 'initiated' && Date.now() - started < POLL_FOR_MS) {
           timer = setTimeout(refresh, POLL_MS)
         }
@@ -75,7 +75,9 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
         {gift.anonymous && ' · Anonymous'}
       </div>
       <div style={{ fontSize: type.xs.fontSize, color: colors.inkMuted, marginTop: 8 }}>
-        {gift.fromCredit ? 'Paid from account credit' : gift.live && method ? method.detail.split('.')[0] : 'Demo checkout'}
+        {gift.fromCredit ? 'Paid from account credit'
+          : gift.momo ? `${gift.momo} — approved on your phone`
+          : gift.live && method ? method.detail.split('.')[0] : 'Demo checkout'}
         {(gift.testMode || !gift.live) && ' · Test only — no real money moved'}
       </div>
 
@@ -91,6 +93,22 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
           <p role="alert" style={{ fontSize: type.sm.fontSize, color: colors.fundLow, marginTop: 24 }}>{error}</p>
         )}
       </section>
+
+      <Refund gift={gift} live={live} updateGift={updateGift} />
+
+      {gift.message && !declined && (
+        <section style={{ marginTop: 48 }}>
+          <Label style={{ marginBottom: 16 }}>Your words of support</Label>
+          <p style={{ fontSize: type.sm.fontSize, lineHeight: 1.7, color: colors.ink }}>"{gift.message}"</p>
+          <p style={{ fontSize: type.xs.fontSize, lineHeight: 1.6, color: colors.inkMuted, marginTop: 8 }}>
+            {supportNote(gift)}
+          </p>
+        </section>
+      )}
+
+      {gift.recurring && !declined && (
+        <MonthlyGift gift={gift} live={live} updateGift={updateGift} />
+      )}
 
       {campaign?.moneyWorkflow && !declined && (
         <section style={{ marginTop: 48 }}>
@@ -108,6 +126,101 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
         <Button variant="ghost" onClick={() => navigate({ name: 'discover' })}>Back to Discover</Button>
       </div>
     </main>
+  )
+}
+
+// The 7-day refund promised on the timeline (supabase request-refund).
+const REFUND_DAYS = 7
+function Refund({ gift, live, updateGift }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const age = (Date.now() - new Date(gift.timestamp).getTime()) / 86_400_000
+  if (!['held', 'paid_out'].includes(gift.status) || age > REFUND_DAYS || gift.fromCredit) return null
+  const daysLeft = Math.max(1, Math.ceil(REFUND_DAYS - age))
+  async function ask() {
+    if (!window.confirm(`Refund ${formatMoney(gift.total)} in full? This cannot be undone.`)) return
+    setBusy(true); setError('')
+    try {
+      if (live) await requestRefund(gift.id, gift.token)
+      const at = new Date().toISOString()
+      updateGift(gift.id, {
+        status: 'refunded',
+        events: [...(gift.events || []), {
+          step: 'refunded', occurred_at: at,
+          note: live ? 'Refund requested — it can take 5–10 working days to arrive.' : 'Refunded — demo, no money moved.',
+        }],
+      })
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <section style={{ marginTop: 48 }}>
+      <Label style={{ marginBottom: 16 }}>Changed your mind?</Label>
+      <p style={{ fontSize: type.sm.fontSize, lineHeight: 1.7, color: colors.inkSoft }}>
+        You can ask for a full refund for {daysLeft} more day{daysLeft === 1 ? '' : 's'}. It goes back the way you paid.
+      </p>
+      {error && <p role="alert" style={{ fontSize: type.sm.fontSize, color: colors.fundLow, marginTop: 12 }}>{error}</p>}
+      <div style={{ marginTop: 16 }}>
+        <Button variant="ghost" onClick={ask} disabled={busy}>{busy ? 'Asking…' : 'Ask for a refund'}</Button>
+      </div>
+    </section>
+  )
+}
+
+// Where the giver's words stand in the review queue (supabase moderation-logic.ts).
+function supportNote(gift) {
+  if (!gift.live) return 'Demo — in the live app every message is checked before others see it.'
+  switch (gift.supportStatus) {
+    case 'approved': return 'Checked and shown on the burden page.'
+    case 'rejected': return 'These words could not be published. Links, contact details and requests for money are not allowed. Your gift is unaffected.'
+    case 'held': return 'A BURDEN reviewer will read them before they appear.'
+    default: return 'They will be checked once your payment is confirmed, then shown on the burden page.'
+  }
+}
+
+// A monthly gift: whether it is running, how each month is paid, and a way to stop it.
+function MonthlyGift({ gift, live, updateGift }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const plan = gift.plan || { status: gift.live ? 'pending' : 'active', method: gift.momo ? 'momo' : 'card' }
+  const running = plan.status === 'active' || plan.status === 'pending'
+  const next = plan.nextChargeAt
+    ? new Date(plan.nextChargeAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+    : null
+  const how = plan.method === 'momo'
+    ? 'Each month we send a prompt to your phone and you approve it with your PIN.'
+    : plan.method === 'subscription' ? 'Your card is charged each month by Stripe.'
+    : 'Your card is charged again each month.'
+  async function stop() {
+    setBusy(true); setError('')
+    try {
+      if (live && gift.planId && gift.planToken) await cancelMonthlyGift(gift.planId, gift.planToken)
+      updateGift(gift.id, { plan: { ...plan, status: 'cancelled', note: 'You stopped this monthly gift.' } })
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <section style={{ marginTop: 48 }}>
+      <Label style={{ marginBottom: 16 }}>Monthly gift</Label>
+      <p style={{ fontSize: type.sm.fontSize, lineHeight: 1.7, color: colors.inkSoft }}>
+        {running
+          ? <>{how} {plan.status === 'pending' ? 'It starts once this first gift is confirmed.' : next ? `Next: ${next}.` : ''}</>
+          : plan.note || 'This monthly gift has stopped.'}
+        {!gift.live && ' Demo — no money moves.'}
+      </p>
+      {error && <p role="alert" style={{ fontSize: type.sm.fontSize, color: colors.fundLow, marginTop: 12 }}>{error}</p>}
+      {running && (live ? gift.planToken : true) && (
+        <div style={{ marginTop: 16 }}>
+          <Button variant="ghost" onClick={stop} disabled={busy}>{busy ? 'Stopping…' : 'Stop monthly gift'}</Button>
+        </div>
+      )}
+    </section>
   )
 }
 

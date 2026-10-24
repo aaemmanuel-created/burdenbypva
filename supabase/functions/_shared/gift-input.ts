@@ -37,6 +37,8 @@ export type GiftInput = {
   donor_email: string;
   provider: Provider;
   return_url: string;
+  // Words of support, checked before anyone else sees them (moderation-logic.ts).
+  message: string | null;
 };
 
 type Result = { ok: true; value: GiftInput } | { ok: false; error: string };
@@ -110,10 +112,13 @@ export function parseGiftInput(body: unknown, charge: ChargeConfig, allowedRetur
       fx_rate: rate,
       recurring: b.recurring === true,
       anonymous,
-      donor_name: anonymous ? null : name,
+      // Kept privately even for anonymous gifts (receipts, sanctions screening);
+      // anonymity hides it from the church and other givers.
+      donor_name: name,
       donor_email: email,
       provider,
       return_url: returnUrl,
+      message: text(b.message, 280),
     },
   };
 }

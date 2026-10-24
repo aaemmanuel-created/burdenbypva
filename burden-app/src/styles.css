@@ -851,3 +851,12 @@ input, textarea, select { font-family: inherit; }
   cursor: default;
 }
 .btn[disabled] { opacity: 0.65; cursor: not-allowed; }
+
+/* Printing a burden's QR poster (screens/Poster.jsx): only the poster prints —
+   no header, dock, footer or buttons. */
+@media print {
+  #root > :not(.print-area) { display: none !important; }
+  .print-area .no-print { display: none !important; }
+  .print-area { padding: 0 !important; }
+  body { background: #fff !important; }
+}

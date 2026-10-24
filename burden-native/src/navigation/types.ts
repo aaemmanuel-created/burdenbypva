@@ -11,8 +11,10 @@ export type TabParamList = {
 
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
-  Campaign: { campaignId: string };
-  Give: { campaignId: string };
+  Campaign: { campaignId: string; fundraiserId?: string };
+  Give: { campaignId: string; fundraiserId?: string };
+  Fundraise: { campaignId: string };
+  Poster: { campaignId: string; fundraiserId?: string };
   // giftId from inside the app; gift + t when the payment server sends
   // the donor back via burden://gift?gift=<id>&t=<token>.
   Gift: { giftId?: string; gift?: string; t?: string };

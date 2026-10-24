@@ -78,7 +78,7 @@ export function buildTimeline(gift) {
       label: 'Paid to church',
       done: !!at.paid_out,
       time: at.paid_out ? fmtWhen(at.paid_out.occurred_at) : gift.holdUntil && `est. ${fmtDay(gift.holdUntil)}`,
-      detail: at.paid_out?.note || `Sent to ${church}'s verified payout account.`,
+      detail: at.paid_out?.note || `Sent to ${church}'s verified ${gift.payoutTo || 'payout account'}.`,
     },
     {
       key: 'church_confirmed',
@@ -89,15 +89,28 @@ export function buildTimeline(gift) {
     },
   ]
 
+  // A refund (within 7 days) ends the timeline: it is added as its own
+  // step, and anything not yet done will not happen.
+  const refunded = !!at.refunded
+  if (refunded) {
+    steps.push({
+      key: 'refunded',
+      label: 'Refunded',
+      done: true,
+      time: fmtWhen(at.refunded.occurred_at),
+      detail: at.refunded.note || 'Your gift was refunded in full.',
+    })
+  }
+
   // The first unfinished step is the one in progress — unless the payment
   // failed, in which case nothing after it will happen.
-  const currentIndex = failed ? 1 : steps.findIndex(s => !s.done)
+  const currentIndex = failed ? 1 : refunded ? -1 : steps.findIndex(s => !s.done)
   return steps.map((s, i) => ({
     ...s,
     state: s.done ? 'done'
       : s.failed ? 'failed'
       : i === currentIndex ? 'current'
-      : failed ? 'stopped'
+      : failed || refunded ? 'stopped'
       : 'upcoming',
   }))
 }
@@ -111,9 +124,10 @@ export function statusLabel(gift) {
     case 'church_confirmed': return 'Church confirmed'
     case 'failed': return 'Payment declined'
     case 'cancelled': return 'Not completed'
+    case 'refunded': return 'Refunded'
     default: return ''
   }
 }
 
 // Gifts that count towards "lifetime giving".
-export const isGiven = (gift) => !['initiated', 'failed', 'cancelled'].includes(gift.status)
+export const isGiven = (gift) => !['initiated', 'failed', 'cancelled', 'refunded'].includes(gift.status)

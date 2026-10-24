@@ -1,0 +1,107 @@
+{
+  "_note": "Demo content for the Updates, Words of support and Fundraisers sections. Mirrored byte-for-byte in burden-native/src/data/community.json — edit both together.",
+  "updates": {
+    "cmp_grace_school": [
+      {
+        "date": "2026-10-14",
+        "author": "Rev. Mary Wanjiku",
+        "role": "Burden lead",
+        "title": "Books and uniforms for 48 children",
+        "body": "Books and uniforms for the first 48 children were bought from the Eastleigh supplier on 9 October and handed out on Saturday. Receipts are filed with James Karanja, our finance steward, and will appear in the monthly statement. The remaining 36 children are next."
+      },
+      {
+        "date": "2026-09-30",
+        "author": "Sarah Njeri",
+        "role": "Programme coordinator",
+        "title": "Lunch every Saturday this month",
+        "body": "Lunch was served on all four Saturdays in September — 84 plates each week. The kitchen is still funded month to month; this burden would cover the rest of the term."
+      }
+    ],
+    "cmp_redeemer_clinic": [
+      {
+        "date": "2026-10-11",
+        "author": "Dr. Funmi Adebowale",
+        "role": "Clinical lead",
+        "title": "First clinic day: 212 patients seen",
+        "body": "Our first clinic day in Makoko saw 212 patients. 61 were referred on for follow-up care, and every referral has a named nurse. Medicines for the next two clinic days have been ordered."
+      },
+      {
+        "date": "2026-09-27",
+        "author": "Pastor Tunde Adebayo",
+        "role": "Burden lead",
+        "title": "Licences confirmed",
+        "body": "The Lagos State outreach licence and the pharmacist's supervision letter are both in place. Copies are on file with the church office and available on request."
+      }
+    ],
+    "cmp_andrew_bursary": [
+      {
+        "date": "2026-10-08",
+        "author": "Mrs. Adwoa Boateng",
+        "role": "Bursary committee chair",
+        "title": "Nine students selected",
+        "body": "The committee met on 6 October and selected nine students for the 2026 intake from 27 applications. Fees for the first five have been paid directly to Osu Presbyterian SHS — never to families — and the school has confirmed receipt."
+      }
+    ],
+    "cmp_allnations_meals": [
+      {
+        "date": "2026-10-16",
+        "author": "Pastor Grace Okoye",
+        "role": "Burden lead",
+        "title": "A fuller hall on Wednesdays",
+        "body": "We served 96 meals last Wednesday, up from 70 in August. Auntie Funke's team now cooks for 100, and the food bank in Peckham gives us bread every week at no cost."
+      },
+      {
+        "date": "2026-10-02",
+        "author": "Daniel Okafor",
+        "role": "Finance steward",
+        "title": "September accounts",
+        "body": "September's food and gas bills came to £1,184. Every receipt is in the church's ledger and is checked by a second trustee before payment."
+      }
+    ],
+    "cmp_lighthouse_rebuild": [
+      {
+        "date": "2026-10-12",
+        "author": "Engr. Romulo Santos",
+        "role": "Site foreman",
+        "title": "Foundations poured",
+        "body": "The foundations for the new hall were poured on 10 October after the soil test passed. The roof steel is ordered for November. The site log, with photographs, is kept at the church office."
+      }
+    ]
+  },
+  "support": {
+    "cmp_grace_school": [
+      { "name": "Wanjiru K.", "date": "2026-10-17", "message": "Praying for every child in that Saturday class. May they learn with joy." },
+      { "name": "Anonymous", "date": "2026-10-12", "message": "I went to a school like this one. Thank you for doing this work." },
+      { "name": "Peter and Ruth M.", "date": "2026-10-03", "message": "From our family to yours in Eastleigh. We are with you." }
+    ],
+    "cmp_redeemer_clinic": [
+      { "name": "Chioma E.", "date": "2026-10-15", "message": "Praying for the nurses and doctors as they serve in Makoko." },
+      { "name": "Anonymous", "date": "2026-10-09", "message": "Thank you for telling us exactly where the money goes." }
+    ],
+    "cmp_andrew_bursary": [
+      { "name": "Kwame A.", "date": "2026-10-10", "message": "A bursary changed my life at Osu. Glad to pass it on." },
+      { "name": "Abena O.", "date": "2026-10-01", "message": "May these nine students finish well." }
+    ],
+    "cmp_allnations_meals": [
+      { "name": "Anonymous", "date": "2026-10-16", "message": "I have eaten at this table myself. Bless the kitchen team." },
+      { "name": "Mark T.", "date": "2026-10-11", "message": "Glad to help keep the doors open on Wednesdays." }
+    ],
+    "cmp_lighthouse_rebuild": [
+      { "name": "Maria L.", "date": "2026-10-14", "message": "Praying for the builders' safety through the rainy season." },
+      { "name": "Anonymous", "date": "2026-10-05", "message": "From the diaspora in Toronto — we have not forgotten you." }
+    ]
+  },
+  "fundraisers": {
+    "cmp_grace_school": [
+      { "id": "fr_grace_wanjiru", "name": "Wanjiru Kamau", "note": "I'm asking my friends at work to carry this with me — books for the 36 children still waiting.", "goal": 500, "raised": 340, "started": "2026-10-05" }
+    ],
+    "cmp_redeemer_clinic": [
+      { "id": "fr_redeemer_youth", "name": "Redeemer youth fellowship", "note": "Our youth group is raising the cost of one clinic day's medicines.", "goal": 1200, "raised": 760, "started": "2026-09-29" }
+    ],
+    "cmp_andrew_bursary": [],
+    "cmp_allnations_meals": [
+      { "id": "fr_allnations_mark", "name": "Mark Thompson", "note": "Running the Hackney half marathon for the Wednesday meal.", "goal": 800, "raised": 515, "started": "2026-10-01" }
+    ],
+    "cmp_lighthouse_rebuild": []
+  }
+}

@@ -23,10 +23,18 @@ export type GiftRow = {
   donor_name: string | null;
   church_name: string;
   campaign_title: string;
+  // Monthly gifts: Stripe runs them as a subscription; Paystack keeps a
+  // reusable authorisation (see plans.ts).
+  recurring?: boolean;
 };
 
 export type Verification =
-  | { outcome: 'paid'; providerRef: string; method: string | null }
+  | {
+    outcome: 'paid'; providerRef: string; method: string | null;
+    // For monthly gifts: a reusable Paystack card authorisation, or the
+    // Stripe subscription that will charge the following months.
+    reusableAuth?: string | null; subscription?: string | null;
+  }
   | { outcome: 'failed'; reason: string }
   | { outcome: 'cancelled' }
   | { outcome: 'pending' };
@@ -74,7 +82,7 @@ function stripeVerification(gift: GiftRow, session: Record<string, any>): Verifi
         String(session.currency).toUpperCase() !== gift.charge_currency) {
       return { outcome: 'failed', reason: 'The amount charged did not match your gift. No funds were released.' };
     }
-    return { outcome: 'paid', providerRef: session.id, method: null };
+    return { outcome: 'paid', providerRef: session.id, method: null, subscription: session.subscription ?? null };
   }
   if (session.status === 'expired') return { outcome: 'cancelled' };
   return PENDING;
@@ -138,23 +146,31 @@ export async function createCheckout(gift: GiftRow, returnUrl: string, secrets: 
   const description = `${gift.campaign_title} — ${gift.church_name}`;
 
   if (gift.provider === 'stripe') {
+    // A monthly gift is a Stripe subscription: Stripe charges each month and
+    // tells us by webhook (invoice.paid), and the donor can stop it any time.
+    const params: Record<string, string> = {
+      mode: gift.recurring ? 'subscription' : 'payment',
+      'line_items[0][quantity]': '1',
+      'line_items[0][price_data][currency]': gift.charge_currency.toLowerCase(),
+      'line_items[0][price_data][unit_amount]': String(gift.charge_amount_minor),
+      'line_items[0][price_data][product_data][name]': `Gift to ${gift.church_name}`,
+      'line_items[0][price_data][product_data][description]': gift.campaign_title,
+      customer_email: gift.donor_email,
+      client_reference_id: gift.id,
+      'metadata[gift_id]': gift.id,
+      success_url: returnUrl,
+      cancel_url: `${returnUrl}&cancelled=1`,
+    };
+    if (gift.recurring) {
+      params['line_items[0][price_data][recurring][interval]'] = 'month';
+      params['subscription_data[metadata][gift_id]'] = gift.id;
+    } else {
+      params['payment_intent_data[metadata][gift_id]'] = gift.id;
+    }
     const session = await stripeFetch(secrets, '/checkout/sessions', {
       method: 'POST',
       headers: { 'Idempotency-Key': `gift-${gift.id}` },
-      body: stripeForm({
-        mode: 'payment',
-        'line_items[0][quantity]': '1',
-        'line_items[0][price_data][currency]': gift.charge_currency.toLowerCase(),
-        'line_items[0][price_data][unit_amount]': String(gift.charge_amount_minor),
-        'line_items[0][price_data][product_data][name]': `Gift to ${gift.church_name}`,
-        'line_items[0][price_data][product_data][description]': gift.campaign_title,
-        customer_email: gift.donor_email,
-        client_reference_id: gift.id,
-        'metadata[gift_id]': gift.id,
-        'payment_intent_data[metadata][gift_id]': gift.id,
-        success_url: returnUrl,
-        cancel_url: `${returnUrl}&cancelled=1`,
-      }),
+      body: stripeForm(params),
     });
     return { checkoutUrl: session.url as string, providerRef: session.id as string };
   }
@@ -208,7 +224,13 @@ export async function verify(gift: GiftRow, secrets: Secrets): Promise<Verificat
       if (d.amount !== gift.charge_amount_minor || d.currency !== gift.charge_currency) {
         return { outcome: 'failed', reason: 'The amount charged did not match your gift. No funds were released.' };
       }
-      return { outcome: 'paid', providerRef: String(d.id), method: d.channel ?? null };
+      // A card marked reusable can be charged again next month (monthly gifts).
+      const auth = d.authorization ?? {};
+      const reusable = d.channel === 'card' && auth.reusable === true;
+      return {
+        outcome: 'paid', providerRef: String(d.id), method: d.channel ?? null,
+        ...(reusable ? { reusableAuth: String(auth.authorization_code) } : {}),
+      };
     }
     if (d.status === 'failed') return { outcome: 'failed', reason: declineCopy(d.gateway_response) };
     return PENDING; // abandoned / ongoing / pending
@@ -242,7 +264,11 @@ function declineCopy(raw: unknown): string {
 
 export type WebhookResult =
   | { valid: false }
-  | { valid: true; giftId: string | null; stripeSession?: Record<string, any>; stripeType?: string };
+  | {
+    valid: true; giftId: string | null; stripeSession?: Record<string, any>; stripeType?: string;
+    // A later month of a Stripe monthly gift (invoice.paid, subscription_cycle).
+    stripeCycle?: { subscription: string; invoice: string; amountPaid: number; currency: string };
+  };
 
 export async function parseWebhook(
   provider: Provider, rawBody: string, headers: Headers, secrets: Secrets, nowSeconds: number,
@@ -254,6 +280,17 @@ export async function parseWebhook(
     if (!ok) return { valid: false };
     const event = JSON.parse(rawBody);
     const session = event.data?.object ?? {};
+    if (event.type === 'invoice.paid' && session.billing_reason === 'subscription_cycle') {
+      const sub = typeof session.subscription === 'string' ? session.subscription
+        : session.parent?.subscription_details?.subscription ?? null;
+      return {
+        valid: true, giftId: null, stripeType: event.type,
+        stripeCycle: sub ? {
+          subscription: sub, invoice: String(session.id), amountPaid: Number(session.amount_paid),
+          currency: String(session.currency).toUpperCase(),
+        } : undefined,
+      };
+    }
     return {
       valid: true,
       giftId: session.metadata?.gift_id ?? session.client_reference_id ?? null,
@@ -287,4 +324,91 @@ export function stripeWebhookVerification(gift: GiftRow, type: string, session: 
   }
   if (type === 'checkout.session.expired') return { outcome: 'cancelled' };
   return PENDING;
+}
+
+// ── Monthly gifts and payouts (see plans.ts, payouts.ts) ────────────────
+
+// Charge a saved, reusable Paystack card for the next month of a plan.
+export async function chargePaystackAuthorization(gift: GiftRow, authorizationCode: string, secrets: Secrets) {
+  await paystackFetch(secrets, '/transaction/charge_authorization', {
+    method: 'POST',
+    body: JSON.stringify({
+      authorization_code: authorizationCode,
+      email: gift.donor_email,
+      amount: gift.charge_amount_minor,
+      currency: gift.charge_currency,
+      reference: gift.id,
+      metadata: { gift_id: gift.id },
+    }),
+  });
+}
+
+export async function cancelStripeSubscription(subscription: string, secrets: Secrets) {
+  await stripeFetch(secrets, `/subscriptions/${encodeURIComponent(subscription)}`, { method: 'DELETE' });
+}
+
+// Paystack transfer recipients: type mobile_money (bank_code = the network's
+// code from the same bank list as MoMo charges) or ghipss for Ghana banks.
+export async function createPaystackRecipient(
+  secrets: Secrets,
+  r: { type: 'mobile_money' | 'ghipss'; name: string; accountNumber: string; bankCode: string; currency: string },
+): Promise<string> {
+  const json = await paystackFetch(secrets, '/transferrecipient', {
+    method: 'POST',
+    body: JSON.stringify({
+      type: r.type, name: r.name, account_number: r.accountNumber, bank_code: r.bankCode, currency: r.currency,
+    }),
+  });
+  return String(json.data.recipient_code);
+}
+
+export async function paystackTransfer(
+  secrets: Secrets,
+  t: { amountMinor: number; currency: string; recipient: string; reference: string; reason: string },
+): Promise<{ status: string; transferCode: string }> {
+  const json = await paystackFetch(secrets, '/transfer', {
+    method: 'POST',
+    body: JSON.stringify({
+      source: 'balance', amount: t.amountMinor, currency: t.currency, recipient: t.recipient,
+      reference: t.reference, reason: t.reason,
+    }),
+  });
+  return { status: String(json.data.status), transferCode: String(json.data.transfer_code) };
+}
+
+// ── Refunds (request-refund, within 7 days) ─────────────────────────────
+
+// Returns the provider's refund reference. Stripe monthly-subscription
+// months are refunded by hand from the Stripe dashboard for now.
+export async function refundPayment(
+  gift: GiftRow & { recurring?: boolean }, secrets: Secrets,
+): Promise<string> {
+  if (!gift.provider_ref) throw new ProviderError('This gift has no payment to refund.');
+  if (gift.provider === 'stripe') {
+    if (!gift.provider_ref.startsWith('cs_')) {
+      throw new ProviderError('This monthly card gift is refunded by the BURDEN team. Please contact BURDEN.');
+    }
+    const session = await stripeFetch(secrets, `/checkout/sessions/${encodeURIComponent(gift.provider_ref)}`);
+    if (!session.payment_intent) {
+      throw new ProviderError('This monthly card gift is refunded by the BURDEN team. Please contact BURDEN.');
+    }
+    const refund = await stripeFetch(secrets, '/refunds', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': `refund-${gift.id}` },
+      body: stripeForm({ payment_intent: String(session.payment_intent), 'metadata[gift_id]': gift.id }),
+    });
+    return String(refund.id);
+  }
+  if (gift.provider === 'paystack') {
+    const json = await paystackFetch(secrets, '/refund', {
+      method: 'POST',
+      body: JSON.stringify({ transaction: gift.provider_ref, merchant_note: `BURDEN refund ${gift.id}` }),
+    });
+    return String(json.data?.id ?? json.data?.transaction?.id ?? 'paystack-refund');
+  }
+  const json = await flutterwaveFetch(secrets, `/transactions/${encodeURIComponent(gift.provider_ref)}/refund`, {
+    method: 'POST',
+    body: JSON.stringify({ comments: `BURDEN refund ${gift.id}` }),
+  });
+  return String(json.data?.id ?? 'flutterwave-refund');
 }

@@ -43,7 +43,52 @@ export function startCheckout(payload) {
   return call('create-gift', { method: 'POST', body: JSON.stringify(payload) })
 }
 
-// → { gift, events }
+// Approve on your phone (mobile money in Ghana) — the network sends the donor
+// a prompt and they approve with their PIN on the phone; BURDEN never sees it.
+// → { giftId, token, testMode, planId?, planToken?, state: approve|otp|paid|failed, message? }
+export function startMomoCharge(payload) {
+  return call('momo-charge', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+// Some networks (Telecel vouchers) send a code first. → { state, message? }
+export function submitMomoOtp(id, token, otp) {
+  return call('momo-otp', { method: 'POST', body: JSON.stringify({ gift: id, t: token, otp }) })
+}
+
+// Stop a monthly gift with the plan token from the first gift.
+export function cancelMonthlyGift(planId, planToken) {
+  return call('cancel-recurring', { method: 'POST', body: JSON.stringify({ plan: planId, t: planToken }) })
+}
+
+// Ghana numbers: 024 123 4567, +233 24 123 4567 → 0241234567 (as the server does).
+export function normaliseGhanaPhone(raw) {
+  let d = String(raw || '').replace(/[\s\-().]/g, '')
+  if (d.startsWith('+')) d = d.slice(1)
+  if (d.startsWith('233')) d = '0' + d.slice(3)
+  return /^0[25]\d{8}$/.test(d) ? d : null
+}
+
+export const MOMO_NETWORKS = [
+  { id: 'mtn', label: 'MTN MoMo' },
+  { id: 'telecel', label: 'Telecel Cash' },
+  { id: 'airteltigo', label: 'AirtelTigo Money' },
+]
+
+// The USSD short code, once BURDEN rents one (e.g. "*713*55#"). Unset: not shown.
+export const USSD_CODE = import.meta.env.VITE_BURDEN_USSD_CODE || ''
+
+// The 7-day refund. → { ok: true }
+export function requestRefund(id, token) {
+  return call('request-refund', { method: 'POST', body: JSON.stringify({ gift: id, t: token }) })
+}
+
+// Approved words of support for one burden (the review queue's public end).
+// → { words: [{ name, message, date }] }
+export function fetchSupportWords(campaignId) {
+  return call(`support-messages?campaign=${encodeURIComponent(campaignId)}`, { method: 'GET' })
+}
+
+// → { gift, events, plan }
 export function fetchGiftStatus(id, token) {
   return call(`gift-status?gift=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`, { method: 'GET' })
 }
