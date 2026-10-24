@@ -2,7 +2,7 @@ import { colors, font, type } from '../theme.js'
 
 // Footer — §4: the dividing rule is gone; 96px of whitespace does the work.
 
-export default function Footer() {
+export default function Footer({ navigate }) {
   return (
     <footer style={{ marginTop: 96 }}>
       <div style={{
@@ -21,7 +21,11 @@ export default function Footer() {
         letterSpacing: '6%',
       }}>
         <div>BURDEN by HOUSEPVA — bear one another's burdens.</div>
-        <div style={{ display: 'flex', gap: 24 }}>
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <button onClick={() => navigate?.({ name: 'church' })} style={{
+            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit',
+            letterSpacing: 'inherit', color: colors.ink, textDecoration: 'underline',
+          }}>For churches</button>
           <span>Eligibility policy</span>
           <span>Trust &amp; verification</span>
           <span>Privacy</span>

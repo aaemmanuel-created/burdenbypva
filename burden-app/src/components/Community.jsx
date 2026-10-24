@@ -37,7 +37,7 @@ export function UpdatesSection({ updates }) {
         <article key={u.date + u.title} style={{
           padding: '18px 0', borderBottom: i < shown.length - 1 ? '1px solid ' + colors.ruleSoft : 'none',
         }}>
-          <div style={meta}>{formatDay(u.date)} · {u.author}, {u.role}</div>
+          <div style={meta}>{formatDay(u.date)} · {u.author}{u.role ? `, ${u.role}` : ''}</div>
           <h3 style={{ marginTop: 8, fontSize: 16, fontWeight: 600, lineHeight: 1.4, color: colors.ink }}>{u.title}</h3>
           <p style={body}>{u.body}</p>
         </article>

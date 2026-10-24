@@ -39,7 +39,7 @@ export function UpdatesSection({ updates }: { updates: Update[] }) {
       )}
       {shown.map((u, i) => (
         <View key={u.date + u.title} style={[styles.item, i === shown.length - 1 && { borderBottomWidth: 0 }]}>
-          <Text style={styles.meta}>{formatDay(u.date)} · {u.author.toUpperCase()}, {u.role.toUpperCase()}</Text>
+          <Text style={styles.meta}>{formatDay(u.date)} · {u.author.toUpperCase()}{u.role ? `, ${u.role.toUpperCase()}` : ''}</Text>
           <Text style={styles.updateTitle}>{u.title}</Text>
           <Text style={styles.body}>{u.body}</Text>
         </View>

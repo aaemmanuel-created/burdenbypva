@@ -5,6 +5,7 @@ import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '
 import { findFundraiser, fundraisersFor, supportFor, updatesFor } from '../lib/community.js'
 import { campaigns, churches } from '../data/mock.js'
 import { fetchSupportWords, liveCheckout } from '../lib/payments.js'
+import { fetchBurdenUpdates } from '../lib/church.js'
 
 // Burden detail. The user-facing word is "burden" — the data model still
 // calls these "campaigns" internally. Every burden surfaces five things
@@ -17,14 +18,17 @@ import { fetchSupportWords, liveCheckout } from '../lib/payments.js'
 // and, alongside them, the community pieces: Updates from the team, Words
 // of support from givers, Fundraisers carrying it with others, and Share.
 
-export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts = [], fundraisers = [], fundraiserId }) {
+export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts = [], fundraisers = [], fundraiserId, churchUpdates = [] }) {
   const [sharing, setSharing] = useState(false)
-  // Live: only words the review queue approved (null until loaded / in demo).
+  // Live: only words the review queue approved, and the updates the church
+  // posted from its dashboard (null until loaded / in demo).
   const [liveWords, setLiveWords] = useState(null)
+  const [liveUpdates, setLiveUpdates] = useState(null)
   useEffect(() => {
     if (!liveCheckout) return
     let stop = false
     fetchSupportWords(id).then(r => { if (!stop) setLiveWords(r.words) }).catch(() => { if (!stop) setLiveWords([]) })
+    fetchBurdenUpdates(id).then(r => { if (!stop) setLiveUpdates(r.updates) }).catch(() => { if (!stop) setLiveUpdates([]) })
     return () => { stop = true }
   }, [id])
   const fundraisersRef = useRef(null)
@@ -43,7 +47,9 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
   }
   const church = churches.find(ch => ch.id === burden.churchId)
   const pct = Math.round((burden.raised / burden.goal) * 100)
-  const updates = updatesFor(burden.id)
+  // Demo: the seeded updates plus any posted from the church dashboard in this browser.
+  const updates = liveUpdates ?? [...churchUpdates.filter(u => u.campaignId === burden.id), ...updatesFor(burden.id)]
+    .sort((a, b) => b.date.localeCompare(a.date))
   const words = supportFor(burden.id, gifts, liveWords)
   const carrying = fundraisersFor(burden.id, fundraisers, gifts)
   const sharedFundraiser = findFundraiser(fundraiserId, fundraisers)
