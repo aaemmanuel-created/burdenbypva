@@ -37,7 +37,7 @@ export type GiftInput = {
   donor_email: string;
   provider: Provider;
   return_url: string;
-  // Words of support, checked before anyone else sees them (moderation.ts).
+  // Words of support, checked before anyone else sees them (moderation-logic.ts).
   message: string | null;
 };
 

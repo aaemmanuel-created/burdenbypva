@@ -1,8 +1,8 @@
 -- BURDEN — words of support with an automated review queue (2026-10-24).
 -- A giver's message is stored with their gift, checked once the payment is
--- confirmed (rules, then Claude — supabase/functions/_shared/moderation.ts),
--- and only "approved" messages are ever shown publicly. "held" messages wait
--- for a BURDEN reviewer (moderation-queue). Amounts are never stored here.
+-- confirmed (rules — supabase/functions/_shared/moderation-logic.ts), and
+-- only "approved" messages are ever shown publicly. "held" messages wait for
+-- a BURDEN reviewer (moderation-queue). Amounts are never stored here.
 
 create table public.support_messages (
   id           bigint generated always as identity primary key,
@@ -15,7 +15,7 @@ create table public.support_messages (
   status       text not null default 'awaiting_payment'
                check (status in ('awaiting_payment', 'approved', 'held', 'rejected')),
   reasons      text[] not null default '{}',
-  checked_by   text,                   -- rules / ai / rules+ai / fallback / reviewer
+  checked_by   text,                   -- rules / reviewer
   checked_at   timestamptz,
   reviewer     text
 );

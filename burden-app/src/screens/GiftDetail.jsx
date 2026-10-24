@@ -170,7 +170,7 @@ function Refund({ gift, live, updateGift }) {
   )
 }
 
-// Where the giver's words stand in the review queue (supabase moderation.ts).
+// Where the giver's words stand in the review queue (supabase moderation-logic.ts).
 function supportNote(gift) {
   if (!gift.live) return 'Demo — in the live app every message is checked before others see it.'
   switch (gift.supportStatus) {

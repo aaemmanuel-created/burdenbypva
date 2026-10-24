@@ -1,12 +1,11 @@
-// Words of support — the automated review queue, part 1: fast, free rules
-// that run before any AI check. Pure (no network), unit-tested in Node.
+// Words of support — the automated review queue: fast, free rules. Pure
+// (no network), unit-tested in Node; run by support.ts once a gift is paid.
 //
 // Every message ends in one of three places:
 //   approve — published on the burden page
 //   hold    — waits for a BURDEN reviewer (moderation-queue)
 //   reject  — never published; the giver is told kindly
-// The rules can only make a message stricter, never looser: a rule "hold"
-// or "reject" always wins over the AI's answer (see moderation.ts).
+// When in doubt the rules hold a message for a person rather than publish it.
 
 export type Decision = 'approve' | 'hold' | 'reject';
 
@@ -44,8 +43,8 @@ const GUARDRAIL = [
   /\b(sow a seed|seed faith|hundredfold)\b/i,
 ];
 
-// A short, deliberately conservative list; the AI check catches the rest.
-// Kept generic here; extend from real reports, never from guesses.
+// A short, deliberately conservative list. Extend it from what reviewers
+// actually see in the queue, never from guesses.
 const ABUSE = [/\b(f+u+c+k+|sh[i1]t|bastard|idiot|stupid|scam(mer)?s?|fraud(ster)?s?|thie(f|ves))\b/i];
 
 export function ruleCheck(raw: string): RuleResult {

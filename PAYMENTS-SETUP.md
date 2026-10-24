@@ -130,10 +130,10 @@ _Studied from MTN MoMo and expressPay with REA. Test mode only, like everything 
 
 ## Review queue and money duties (added 2026-10-24)
 
-**Words of support — automated review queue.** Each message is stored with its gift and checked once the payment is confirmed:
-1. **Free rules** (`_shared/moderation-logic.ts`): requests for money, wallet numbers, crypto and "investments" are **rejected**; links, emails, phone numbers, "WhatsApp me", urgency or "God will repay your giving" language, insults and shouting are **held**.
-2. **Claude** (`_shared/moderation.ts`) reads whatever the rules let through and answers approve / hold / reject. The stricter of the two answers wins.
-3. **Fails closed:** if Claude can't be reached, declines, or no key is set, the message is **held** for a person. Nothing unchecked is ever shown.
+**Words of support — automated review queue.** Each message is stored with its gift and checked by rules once the payment is confirmed (`_shared/moderation-logic.ts`):
+- requests for money, wallet numbers, crypto and "investments" are **rejected** (never shown);
+- links, emails, phone numbers, "WhatsApp me", urgency or "God will repay your giving" language, insults and shouting are **held** for a person;
+- everything else is **approved** and appears on the burden page.
 Only approved words are public (`support-messages`). A reviewer clears held ones with `moderation-queue` (GET to list, POST `{ "id": 12, "decision": "approve" }`, header `x-burden-admin-key`). The giver sees their own words as "waiting" until then.
 
 **Receipts.** A numbered receipt is emailed when the payment is confirmed (Postmark). USSD givers, who have no email, get an SMS instead (Africa's Talking).
@@ -146,12 +146,12 @@ Only approved words are public (`support-messages`). A reviewer clears held ones
 1. Deploy: `supabase db push` then `supabase functions deploy` (two new migrations, eight new functions).
 2. Secrets (all optional in test mode — each feature says what is missing in the logs and carries on):
    ```bash
-   supabase secrets set ANTHROPIC_API_KEY=<key> POSTMARK_SERVER_TOKEN=<token> RECEIPT_FROM="BURDEN <receipts@your-domain>"
+   supabase secrets set POSTMARK_SERVER_TOKEN=<token> RECEIPT_FROM="BURDEN <receipts@your-domain>"
    ```
    ```bash
    supabase secrets set AT_USERNAME=<Africa's Talking username, or sandbox> AT_API_KEY=<key> SMS_SENDER_ID=<approved sender id>
    ```
-   Optional: `MODERATION_MODEL` (default `claude-opus-5-5`; e.g. `claude-haiku-5-5` for lower cost), `FX_SOURCE_URL`, `OFAC_SDN_URL`, `UK_SANCTIONS_URL`.
+   Optional: `FX_SOURCE_URL`, `OFAC_SDN_URL`, `UK_SANCTIONS_URL`.
 3. Add a third daily cron job: `POST …/functions/v1/sanctions-refresh` with `x-burden-cron: <CRON_SECRET>`, and run it once by hand before the first gift.
 4. Check `UK_SANCTIONS_URL` still serves the UK consolidated list CSV — the UK has been moving it to the FCDO's UK Sanctions List.
 5. Postmark: verify the sending domain (SPF/DKIM) so receipts aren't treated as spam.
