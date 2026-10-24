@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import type { RootStackParamList, TabParamList } from '../navigation/types';
 import { DOCK_SPACE } from '../components/Dock';
 import { DockSurfaceCtx, useDockSurface } from '../lib/dockSurface';
 import { isGiven, statusLabel } from '../lib/giftTimeline';
+import AccountCard from '../components/AccountCard';
 
 const statusTone: Record<string, string> = {
   initiated: colors.warn, held: colors.warn, paid_out: colors.trust, church_confirmed: colors.trust,
@@ -24,6 +25,7 @@ type Nav = CompositeNavigationProp<
 
 export default function GivingScreen({ navigation }: { navigation: Nav }) {
   const { gifts } = useGifts();
+  const openFundraiser = (campaignId: string, fundraiserId: string) => navigation.navigate('Campaign', { campaignId, fundraiserId });
   const surface = useDockSurface();
   const given = gifts.filter(isGiven);
   const total = given.reduce((s, g) => s + g.amount, 0);
@@ -31,16 +33,17 @@ export default function GivingScreen({ navigation }: { navigation: Nav }) {
 
   if (gifts.length === 0) {
     return (
-      <View style={{ padding: 20, backgroundColor: colors.bg, flex: 1 }}>
+      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: DOCK_SPACE + 32 }} keyboardShouldPersistTaps="handled">
         <Label>Giving history</Label>
         <Text style={styles.h1}>Your gifts on BURDEN.</Text>
+        <AccountCard onOpenFundraiser={openFundraiser} />
         <View style={styles.emptyCard}>
           <Text style={styles.emptyText}>You haven't given a gift yet.</Text>
           <Button onPress={() => navigation.navigate('Tabs', { screen: 'Discover' })}>
             Discover churches
           </Button>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -51,12 +54,14 @@ export default function GivingScreen({ navigation }: { navigation: Nav }) {
       scrollEventThrottle={16}
       style={{ backgroundColor: colors.bg }}
       data={reversed}
+      keyboardShouldPersistTaps="handled"
       keyExtractor={(g) => g.id}
       contentContainerStyle={{ paddingBottom: DOCK_SPACE + 32 }}
       ListHeaderComponent={
         <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
           <Label>Giving history</Label>
           <Text style={styles.h1}>Your gifts on BURDEN.</Text>
+          <AccountCard onOpenFundraiser={openFundraiser} />
           <Tile style={styles.summary}>
             <View>
               <Label onNavy>Lifetime giving</Label>

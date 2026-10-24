@@ -2,7 +2,7 @@
 // Fundraisers — and the Share sheet. Native twins of
 // burden-app/src/components/Community.jsx.
 import React, { useState } from 'react';
-import { Linking, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Campaign, Church } from '../data/mock';
@@ -10,6 +10,7 @@ import { Button, Label, Progress, Tile } from './UI';
 import { colors, font, formatMoney, tile } from '../constants/theme';
 import { formatDay, shareText, shareUrl, type Fundraiser, type SupportWord, type Update } from '../lib/community';
 import { useT } from '../lib/i18n';
+import { reportContent } from '../lib/account';
 
 function SectionHead({ label, count }: { label: string; count: number }) {
   return (
@@ -28,8 +29,59 @@ function More({ children, onPress }: { children: string; onPress: () => void }) 
   );
 }
 
+const REASONS: [string, string][] = [
+  ['scam', 'Scam or fraud'], ['abuse', 'Abusive or hateful'], ['false', 'Not true'],
+  ['private', "Shares someone's private details"], ['other', 'Something else'],
+];
+
+// "Report" under an update, a word of support or a fundraiser. A person on
+// the BURDEN team decides; nothing is taken down automatically.
+export function ReportLink({ kind, refId, campaignId, onNavy = false }: { kind: string; refId: string; campaignId: string; onNavy?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [detail, setDetail] = useState('');
+  const [state, setState] = useState(''); // '', 'sending', 'sent', or an error
+  const ink = onNavy ? tile.muted : colors.inkMuted;
+  const strong = onNavy ? tile.ink : colors.ink;
+  if (state === 'sent') return <Text accessibilityRole="text" style={[styles.report, { color: ink, textDecorationLine: 'none', marginTop: 8 }]}>Thank you. The BURDEN team will look at it.</Text>;
+  if (!open) {
+    return (
+      <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 8 }}>
+        <Text style={[styles.report, { color: ink }]}>REPORT</Text>
+      </Pressable>
+    );
+  }
+  return (
+    <View style={{ marginTop: 10, gap: 8 }} accessibilityLabel="Report this">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="radiogroup">
+        {REASONS.map(([id, label]) => (
+          <Pressable key={id} onPress={() => setReason(id)} accessibilityRole="radio" accessibilityState={{ selected: reason === id }}
+            style={[styles.reason, { borderColor: onNavy ? 'rgba(255,255,255,0.4)' : colors.rule }, reason === id && { backgroundColor: onNavy ? '#fff' : colors.ink }]}>
+            <Text style={[styles.reasonText, { color: reason === id ? (onNavy ? colors.navyDeep : colors.accentInk) : strong }]}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <TextInput value={detail} onChangeText={setDetail} maxLength={500} placeholder="Anything else the team should know (optional)"
+        placeholderTextColor={ink} accessibilityLabel="Anything else the team should know"
+        style={[styles.reportInput, { color: strong, borderColor: onNavy ? 'rgba(255,255,255,0.4)' : colors.rule }]} />
+      <View style={{ flexDirection: 'row', gap: 20 }}>
+        <Pressable disabled={!reason || state === 'sending'} accessibilityRole="button" hitSlop={8} onPress={async () => {
+          setState('sending');
+          try { await reportContent({ kind, ref: refId, campaignId, reason, detail }); setState('sent'); } catch (e) { setState((e as Error).message); }
+        }}>
+          <Text style={[styles.report, { color: reason ? strong : ink }]}>SEND REPORT</Text>
+        </Pressable>
+        <Pressable onPress={() => setOpen(false)} accessibilityRole="button" hitSlop={8}>
+          <Text style={[styles.report, { color: ink }]}>CANCEL</Text>
+        </Pressable>
+      </View>
+      {!!state && state !== 'sending' && <Text accessibilityRole="alert" style={[styles.reasonText, { color: colors.fundLow }]}>{state}</Text>}
+    </View>
+  );
+}
+
 // Dated posts from the burden's team — newest open, older ones folded.
-export function UpdatesSection({ updates }: { updates: Update[] }) {
+export function UpdatesSection({ updates, campaignId }: { updates: Update[]; campaignId: string }) {
   const t = useT();
   const [all, setAll] = useState(false);
   const shown = all ? updates : updates.slice(0, 1);
@@ -44,6 +96,7 @@ export function UpdatesSection({ updates }: { updates: Update[] }) {
           <Text style={styles.meta}>{formatDay(u.date)} · {u.author.toUpperCase()}{u.role ? `, ${u.role.toUpperCase()}` : ''}</Text>
           <Text style={styles.updateTitle}>{u.title}</Text>
           <Text style={styles.body}>{u.body}</Text>
+          <ReportLink kind="update" refId={(u as Update & { id?: string }).id ?? u.date + ' ' + u.title} campaignId={campaignId} />
         </View>
       ))}
       {updates.length > 1 && (
@@ -56,7 +109,7 @@ export function UpdatesSection({ updates }: { updates: Update[] }) {
 }
 
 // Messages givers leave with their gifts. Never the amount.
-export function SupportSection({ words, onGive }: { words: SupportWord[]; onGive: () => void }) {
+export function SupportSection({ words, onGive, campaignId }: { words: SupportWord[]; onGive: () => void; campaignId: string }) {
   const t = useT();
   const [all, setAll] = useState(false);
   const shown = all ? words : words.slice(0, 3);
@@ -73,6 +126,7 @@ export function SupportSection({ words, onGive }: { words: SupportWord[]; onGive
             <Text style={styles.meta}>{formatDay(w.date)}</Text>
           </View>
           <Text style={[styles.body, { color: colors.ink, marginTop: 6 }]}>{w.message}</Text>
+          {!w.own && <ReportLink kind="support" refId={(w as SupportWord & { id?: string }).id ?? w.date + ' ' + w.name} campaignId={campaignId} />}
         </View>
       ))}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24 }}>
@@ -85,9 +139,9 @@ export function SupportSection({ words, onGive }: { words: SupportWord[]; onGive
 
 // People carrying this burden with their own circle.
 export function FundraisersSection({
-  fundraisers, highlightId, onGiveThrough, onStart,
+  fundraisers, highlightId, onGiveThrough, onStart, campaignId,
 }: {
-  fundraisers: Fundraiser[]; highlightId?: string;
+  fundraisers: Fundraiser[]; highlightId?: string; campaignId: string;
   onGiveThrough: (f: Fundraiser) => void; onStart: () => void;
 }) {
   const t = useT();
@@ -114,6 +168,7 @@ export function FundraisersSection({
                   {`Give through ${f.own ? 'your page' : f.name.split(' ')[0]}`}
                 </Button>
               </View>
+              {!f.own && <ReportLink kind="fundraiser" refId={f.id} campaignId={campaignId} onNavy />}
             </Tile>
           </View>
         ))}
@@ -224,4 +279,8 @@ const styles = StyleSheet.create({
   sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sheetTitle: { fontFamily: font.bold, fontSize: 18, color: colors.ink },
   close: { fontSize: 24, lineHeight: 26, color: colors.ink, fontFamily: font.regular },
+  report: { fontFamily: font.regular, fontSize: 11, letterSpacing: 1, textDecorationLine: 'underline' },
+  reason: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 10 },
+  reasonText: { fontFamily: font.regular, fontSize: 12 },
+  reportInput: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontFamily: font.regular, fontSize: 13 },
 });

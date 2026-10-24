@@ -171,6 +171,28 @@ In Supabase → Authentication, keep **Email** sign-in on and set the email temp
 - "New update" when a church posts — email only to givers who ticked "Email me when the church posts an update" (one-click unsubscribe in every email; set `UNSUBSCRIBE_SECRET`), push to phones following that burden.
 Phone push needs a development or store build of the app (`expo-notifications`; Expo Go can't receive pushes on Android). The website has no browser push; the gift page shows the same steps.
 
+## Giver accounts, church applications and the BURDEN team console (added 2026-10-26)
+
+Migration `20261026000000_accounts_admin.sql`; new functions `account`, `fundraisers`, `burden-content`, `church-apply`, `report`, `admin` (deploy them all; `config.toml` already lists them).
+
+**Giver accounts.** Givers sign in the same way church staff do — a one-time code by email, no password (website: Profile; phone: top of the Giving tab). Gifts given with that email are linked automatically; gifts made on a device before signing in are claimed with the token that device kept. Signing out clears the device; deleting the account closes open fundraisers and unlinks gifts (the gifts themselves stay — receipts, refunds and Gift Aid need them).
+
+**Fundraisers live on the server.** Starting one needs an account (so it has an owner who can close it). The shared link `?burden=…&f=fr_…` now shows the page to anyone, and gifts through it are counted by the server (`gifts.fundraiser_id`; only an open fundraiser on the same burden counts).
+
+**Churches change their own wording.** Dashboard → Edit burden: summary, what it is for, where things stand, where the money goes, what to pray for. Every change waits for a BURDEN reviewer (urgency and "spiritual reward" wording is flagged for them, not blocked). The goal is not editable there. Approved wording is served by `burden-content` and laid over the text the apps ship with (web only for now — the phone still shows the shipped text).
+
+**Churches apply to join.** "For churches" → Apply to join (`church-apply`). The reviewer works through the KYB checks in the console — Basic: registration, leadership/oversight, creeds, sanctions; Verified adds references, place of worship, bank name match; Premium Trust adds financial statements and a call or visit. Each check needs a note of what was seen. Approving creates the church's id, its tier and its first dashboard admin (the contact email). *New churches' burdens still have to be added to the app data by hand until burdens live in the database.*
+
+**Reports.** Every update, word of support and fundraiser has a Report link. Nothing is taken down automatically.
+
+**The BURDEN team console** (website footer → BURDEN team): churches (applications, tiers, suspend), burden wording, held words of support, public reports, sanctions matches, payout accounts to verify, and the **audit log** — every decision needs a reason and is logged with the person's name, and givers' emails and account numbers are never written into it. An owner can correct an entry's note or remove an entry (Emmanuel, 2026-10-26), always with a reason: the entry shows who changed it and why, the database copies the earlier version into `audit_log_history` itself, removed entries stay visible to owners, and nothing is ever deleted. A suspended church is paid nothing (`run-payouts` checks). Add the first owner once:
+```bash
+curl -X POST https://<project>.supabase.co/functions/v1/admin -H "x-burden-admin-key: <CHURCH_ADMIN_KEY>" -H "Content-Type: application/json" -d '{"action":"admin_add","email":"you@example.org","name":"Your Name","role":"owner"}'
+```
+Owners add reviewers from the same endpoint. The older key-only queues (`moderation-queue`, `screening-queue`) still work for scripts.
+
+**Demo (no server):** the sign-in code is **123456**; accounts, applications, reports and the console's queues live in that browser (the phone keeps its own demo accounts).
+
 ## Go-live checklist (NOT done — needed before real money)
 
 1. **Legal entity.** BURDEN must be a registered company or charity that can open live provider accounts. The blueprint recommends a UK CIO (charity), which also unlocks Gift Aid and Apple's charity rule. Get counsel review first (blueprint §15).
@@ -178,5 +200,5 @@ Phone push needs a development or store build of the app (`expo-notifications`; 
 3. **Real payouts to churches.** Paystack gifts can now be paid to a church's verified MoMo wallet or bank (`run-payouts`, behind `PAYOUTS_LIVE=true`). Stripe and Flutterwave gifts still need Stripe Connect / Flutterwave transfers and church onboarding.
 4. **Done in code, still to switch on:** receipts (Postmark), SMS receipts (Africa's Talking), 7-day refunds, Gift Aid declarations, sanctions screening and live exchange rates (see "Review queue and money duties"). **Still missing:** an annual tax statement per donor (needs donor accounts) and a paid screening service.
 5. **Apple App Store.** Guideline 3.2.1(vi) lets approved charities take donations outside in-app purchase. The native app already sends donors to the provider's web page, which matches the blueprint's plan.
-6. **Donor accounts.** Gifts are currently remembered per device (web: browser storage; native: until the app closes). Logging in would let donors see their gifts on any device.
+6. **Donor accounts — built 2026-10-26** (see above). Still to add on top: the annual tax statement per donor.
 7. Only then: set `PAYMENTS_LIVE=true` on the server. Until that's set, the server refuses any live key, even if one is entered by mistake.

@@ -28,6 +28,10 @@ export default function Footer({ navigate }) {
             background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit',
             letterSpacing: 'inherit', color: colors.ink, textDecoration: 'underline',
           }}>{t('footer.churches')}</button>
+          <button onClick={() => navigate?.({ name: 'admin' })} style={{
+            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit',
+            letterSpacing: 'inherit', color: colors.ink, textDecoration: 'underline',
+          }}>{t('footer.team')}</button>
           <label style={{ display: 'inline-flex', gap: 8, alignItems: 'baseline' }}>
             {t('lang.label')}
             <select value={lang} onChange={e => setLang(e.target.value)} style={{

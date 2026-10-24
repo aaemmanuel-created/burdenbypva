@@ -1,6 +1,7 @@
 // Start a fundraiser for a burden: your name, why you're carrying it, and a
 // goal for your own circle. Gifts through it go to the church as usual.
-// Kept in memory until fundraisers live on the payment server.
+// Starting one needs an account, so it has an owner who can close it and its
+// link shows the same page to everyone.
 // Mirrors burden-app/src/screens/Fundraise.jsx.
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -13,13 +14,18 @@ import { colors, font, formatMoney } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
 import { MESSAGE_MAX, type Fundraiser } from '../lib/community';
 import type { RootStackParamList } from '../navigation/types';
+import SignIn from '../components/SignIn';
+import { authLive } from '../lib/auth';
+import { startFundraiserOnServer } from '../lib/account';
 
 const PRESETS = [100, 250, 500, 1000];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Fundraise'>;
 
 export default function FundraiseScreen({ route, navigation }: Props) {
-  const { addFundraiser } = useGifts();
+  const { addFundraiser, account } = useGifts();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [goal, setGoal] = useState(250);
@@ -39,20 +45,29 @@ export default function FundraiseScreen({ route, navigation }: Props) {
   const value = custom !== '' ? Math.floor(Number(custom) || 0) : goal;
   const ready = name.trim().length > 0 && note.trim().length > 0 && value >= 1;
 
-  function submit() {
-    if (!ready || !campaign) return;
-    const fundraiser: Fundraiser = {
-      id: 'fr_' + Date.now(),
-      campaignId: campaign.id,
-      name: name.trim(),
-      note: note.trim(),
-      goal: value,
-      raised: 0,
-      started: new Date().toISOString().slice(0, 10),
-      own: true,
-    };
-    addFundraiser(fundraiser);
-    setMade(fundraiser);
+  async function submit() {
+    if (!ready || !campaign || busy) return;
+    setBusy(true); setError('');
+    try {
+      const fundraiser: Fundraiser = authLive
+        ? await startFundraiserOnServer({ campaignId: campaign.id, name: name.trim(), note: note.trim(), goal: value })
+        : {
+            id: 'fr_' + Date.now(),
+            campaignId: campaign.id,
+            name: name.trim(),
+            note: note.trim(),
+            goal: value,
+            raised: 0,
+            started: new Date().toISOString().slice(0, 10),
+            own: true,
+          };
+      addFundraiser(fundraiser);
+      setMade(fundraiser);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (made) {
@@ -70,8 +85,8 @@ export default function FundraiseScreen({ route, navigation }: Props) {
           onPoster={() => navigation.navigate('Poster', { campaignId: campaign.id, fundraiserId: made.id })}
         />
         <Text style={styles.help}>
-          For now your fundraiser is kept on this phone only, so the link opens the burden for others but they
-          won't see your page yet.
+          It is kept with your account ({account?.email}). Anyone with the link sees your page; you can close it
+          from the Giving tab at any time.
         </Text>
         <Button
           style={{ marginTop: 28 }}
@@ -91,6 +106,10 @@ export default function FundraiseScreen({ route, navigation }: Props) {
 
       <Rule soft style={{ marginVertical: 24 }} />
 
+      {!account ? (
+        <SignIn button="Sign in and continue"
+          intro="A fundraiser is yours to share and to close, so it is kept with your account. Sign in with your email — no password." />
+      ) : (<>
       <Label style={{ marginBottom: 12 }}>Your name, or your group's</Label>
       <TextInput
         placeholder="e.g. Ama Mensah, or St Paul's youth"
@@ -134,7 +153,9 @@ export default function FundraiseScreen({ route, navigation }: Props) {
       />
       <Text style={styles.help}>Your goal is your own. It sits inside the burden's goal, not on top of it.</Text>
 
-      <Button style={{ marginTop: 32 }} onPress={submit} disabled={!ready}>Start my fundraiser</Button>
+      {!!error && <Text accessibilityRole="alert" style={[styles.help, { color: colors.fundLow, fontSize: 13 }]}>{error}</Text>}
+      <Button style={{ marginTop: 32 }} onPress={submit} disabled={!ready || busy}>{busy ? 'One moment…' : 'Start my fundraiser'}</Button>
+      </>)}
     </ScrollView>
   );
 }

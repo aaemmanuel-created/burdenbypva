@@ -87,3 +87,24 @@ verify_jwt = false
 
 [functions.unsubscribe]
 verify_jwt = false
+
+# Added 2026-10-26: giver accounts, fundraisers on the server, church
+# applications, reports and the admin console. `account` and `admin` check the
+# signed-in user's token themselves (admin also accepts CHURCH_ADMIN_KEY).
+[functions.account]
+verify_jwt = false
+
+[functions.fundraisers]
+verify_jwt = false
+
+[functions.burden-content]
+verify_jwt = false
+
+[functions.church-apply]
+verify_jwt = false
+
+[functions.report]
+verify_jwt = false
+
+[functions.admin]
+verify_jwt = false

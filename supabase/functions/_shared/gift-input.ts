@@ -41,6 +41,8 @@ export type GiftInput = {
   message: string | null;
   // Opted in to emails when the church posts an update on this burden.
   notify_updates: boolean;
+  // Given through someone's fundraiser (checked against the fundraisers table in insertGift).
+  fundraiser_id: string | null;
 };
 
 type Result = { ok: true; value: GiftInput } | { ok: false; error: string };
@@ -122,6 +124,7 @@ export function parseGiftInput(body: unknown, charge: ChargeConfig, allowedRetur
       return_url: returnUrl,
       message: text(b.message, 280),
       notify_updates: b.notifyUpdates === true,
+      fundraiser_id: typeof b.fundraiserId === 'string' && /^fr_[a-z0-9]{10,}$/.test(b.fundraiserId) ? b.fundraiserId : null,
     },
   };
 }

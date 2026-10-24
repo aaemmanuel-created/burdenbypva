@@ -19,7 +19,7 @@ export type Update = { date: string; author: string; role: string; title: string
 export type SupportWord = { name: string; date: string; message: string; own?: boolean; waiting?: boolean };
 export type Fundraiser = {
   id: string; campaignId?: string; name: string; note: string;
-  goal: number; raised: number; started: string; own?: boolean;
+  goal: number; raised: number; started: string; own?: boolean; closed?: boolean;
 };
 
 const updates = community.updates as Record<string, Update[]>;

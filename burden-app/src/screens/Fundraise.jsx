@@ -4,14 +4,19 @@ import { Button, Label, formatMoney } from '../components/UI.jsx'
 import { ShareOptions } from '../components/Community.jsx'
 import { MESSAGE_MAX } from '../lib/community.js'
 import { campaigns, churches } from '../data/mock.js'
+import SignIn from '../components/SignIn.jsx'
+import { authLive } from '../lib/auth.js'
+import { startFundraiserOnServer } from '../lib/account.js'
 
 // Start a fundraiser for a burden: your name, why you're carrying it, and a
 // goal for your own circle. Gifts through it go to the church as usual.
-// Kept on this device until fundraisers live on the payment server.
+// Starting one needs an account, so every fundraiser has an owner who can
+// close it, and its link shows the same page to everyone (live: the
+// `account` function stores it; demo: this browser's accounts).
 
 const PRESETS = [100, 250, 500, 1000]
 
-export default function Fundraise({ id, navigate, profile, addFundraiser }) {
+export default function Fundraise({ id, navigate, profile, addFundraiser, account, onSignIn }) {
   const campaign = campaigns.find(c => c.id === id)
   const church = campaign && churches.find(ch => ch.id === campaign.churchId)
   const [name, setName] = useState(profile?.name || '')
@@ -19,6 +24,8 @@ export default function Fundraise({ id, navigate, profile, addFundraiser }) {
   const [goal, setGoal] = useState(250)
   const [custom, setCustom] = useState('')
   const [made, setMade] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
 
   if (!campaign) {
     return (
@@ -32,22 +39,31 @@ export default function Fundraise({ id, navigate, profile, addFundraiser }) {
   const value = custom !== '' ? Math.floor(Number(custom) || 0) : goal
   const ready = name.trim().length > 0 && note.trim().length > 0 && value >= 1
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault()
-    if (!ready) return
-    const fundraiser = {
-      id: 'fr_' + Date.now(),
-      campaignId: campaign.id,
-      name: name.trim(),
-      note: note.trim(),
-      goal: value,
-      raised: 0,
-      started: new Date().toISOString().slice(0, 10),
-      own: true,
+    if (!ready || busy) return
+    setBusy(true); setError('')
+    try {
+      const fundraiser = authLive
+        ? await startFundraiserOnServer({ campaignId: campaign.id, name: name.trim(), note: note.trim(), goal: value })
+        : {
+            id: 'fr_' + Date.now(),
+            campaignId: campaign.id,
+            name: name.trim(),
+            note: note.trim(),
+            goal: value,
+            raised: 0,
+            started: new Date().toISOString().slice(0, 10),
+            own: true,
+          }
+      addFundraiser(fundraiser)
+      setMade(fundraiser)
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
     }
-    addFundraiser(fundraiser)
-    setMade(fundraiser)
-    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   const h1 = {
@@ -69,8 +85,8 @@ export default function Fundraise({ id, navigate, profile, addFundraiser }) {
           onPoster={() => navigate({ name: 'poster', id: campaign.id, fundraiserId: made.id })}
         />
         <p style={{ marginTop: 16, fontSize: 11, lineHeight: 1.6, color: colors.inkMuted }}>
-          For now your fundraiser is kept on this device only, so the link opens the burden for others
-          but they won't see your page yet.
+          It is kept with your account ({account?.email}). Anyone with the link sees your page; you can close it
+          from your profile at any time.
         </p>
         <div style={{ marginTop: 32, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button onClick={() => navigate({ name: 'campaign', id: campaign.id, fundraiserId: made.id })}>See it on the burden</Button>
@@ -96,6 +112,12 @@ export default function Fundraise({ id, navigate, profile, addFundraiser }) {
         {church.name} · {campaign.title}
       </div>
 
+      {!account ? (
+        <div style={{ marginTop: 48, maxWidth: 480 }}>
+          <SignIn onSignedIn={onSignIn} button="Sign in and continue"
+            intro="A fundraiser is yours to share and to close, so it is kept with your account. Sign in with your email — no password." />
+        </div>
+      ) : (
       <form onSubmit={submit} style={{ marginTop: 48 }}>
         <div style={{ marginBottom: 36 }}>
           <Label style={{ marginBottom: 14 }}>Your name, or your group's</Label>
@@ -134,8 +156,10 @@ export default function Fundraise({ id, navigate, profile, addFundraiser }) {
           </p>
         </div>
 
-        <Button type="submit" full disabled={!ready}>Start my fundraiser</Button>
+        {error && <p role="alert" style={{ margin: '0 0 16px', fontSize: 13, color: colors.fundLow }}>{error}</p>}
+        <Button type="submit" full disabled={!ready || busy}>{busy ? 'One moment…' : 'Start my fundraiser'}</Button>
       </form>
+      )}
     </main>
   )
 }

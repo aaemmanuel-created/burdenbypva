@@ -7,6 +7,7 @@ import { MOMO_NETWORKS, normaliseGhanaPhone } from '../lib/payments.js'
 import {
   churchAction, churchLive, currentSession, loadDashboard, sendCode, signOut, verifyCode,
 } from '../lib/church.js'
+import { EDITABLE, demoAudit, demoSubmitEdit, flagsFor, useDemoTrust } from '../lib/trust.js'
 
 // The church dashboard — for the people carrying a burden, not its givers.
 // Everything the giver sees ("Paid to church", "Church confirms", updates)
@@ -14,7 +15,7 @@ import {
 // pick a church; gifts made in this browser show up, and confirming or
 // posting appears on the giver's pages straight away.
 
-const TABS = ['Overview', 'Gifts', 'Post an update', 'Payout account', 'Team']
+const TABS = ['Overview', 'Gifts', 'Post an update', 'Edit burden', 'Payout account', 'Team']
 
 export default function Church({ navigate, gifts, updateGift, churchUpdates, addChurchUpdate, demoPayouts, setDemoPayout }) {
   const [session, setSession] = useState(null) // live: Supabase session; demo: { churchId }
@@ -32,8 +33,9 @@ export default function Church({ navigate, gifts, updateGift, churchUpdates, add
   useEffect(() => { if (churchLive && session) refresh() }, [session, refresh])
 
   // Demo: the same shape the server returns, built from this browser's gifts.
-  const demo = useMemo(() => (!churchLive && session ? demoDashboard(session.churchId, gifts, churchUpdates, demoPayouts) : null),
-    [session, gifts, churchUpdates, demoPayouts])
+  const trust = useDemoTrust()
+  const demo = useMemo(() => (!churchLive && session ? demoDashboard(session.churchId, gifts, churchUpdates, demoPayouts, trust.edits) : null),
+    [session, gifts, churchUpdates, demoPayouts, trust.edits])
   const church = churchLive ? data?.churches?.[0] : demo
   const info = church && churches.find(c => c.id === church.churchId)
 
@@ -51,6 +53,10 @@ export default function Church({ navigate, gifts, updateGift, churchUpdates, add
 
   function demoAct(action, f) {
     const at = new Date().toISOString()
+    const actor = `${church.me.name} (${info.name})`
+    if (action === 'edit') { demoSubmitEdit(church.churchId, f.campaignId, f.fields, actor); return }
+    const logged = { confirm: ['gift.confirm', 'gift', f.gift], update: ['update.post', 'burden', f.campaignId], payout: ['payout.submit', 'church', church.churchId] }[action]
+    if (logged) demoAudit(actor, logged[0], logged[1], logged[2], action === 'update' ? { title: f.title } : {})
     if (action === 'confirm') {
       const g = gifts.find(x => x.id === f.gift)
       updateGift(f.gift, {
@@ -70,7 +76,7 @@ export default function Church({ navigate, gifts, updateGift, churchUpdates, add
     }
   }
 
-  if (!session) return <SignIn onSignedIn={setSession} />
+  if (!session) return <SignIn onSignedIn={setSession} navigate={navigate} />
 
   return (
     <main style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 28px 96px' }}>
@@ -102,6 +108,7 @@ export default function Church({ navigate, gifts, updateGift, churchUpdates, add
           {tab === 'Overview' && <Overview church={church} onGifts={() => setTab('Gifts')} navigate={navigate} />}
           {tab === 'Gifts' && <Gifts church={church} act={act} />}
           {tab === 'Post an update' && <PostUpdate church={church} act={act} navigate={navigate} />}
+          {tab === 'Edit burden' && <EditBurden church={church} act={act} navigate={navigate} />}
           {tab === 'Payout account' && <Payout church={church} act={act} />}
           {tab === 'Team' && <Team church={church} act={act} />}
         </>
@@ -112,7 +119,7 @@ export default function Church({ navigate, gifts, updateGift, churchUpdates, add
 
 // ── Sign in ─────────────────────────────────────────────────────────────
 
-function SignIn({ onSignedIn }) {
+function SignIn({ onSignedIn, navigate }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [sent, setSent] = useState(false)
@@ -169,6 +176,14 @@ function SignIn({ onSignedIn }) {
           </div>
         </div>
       )}
+      <div style={{ marginTop: 48, borderTop: '1px solid ' + colors.ruleSoft, paddingTop: 24 }}>
+        <Label>Not on BURDEN yet?</Label>
+        <p style={{ fontSize: 13, lineHeight: 1.7, color: colors.inkSoft, margin: '10px 0 16px' }}>
+          Churches and Christian institutions apply first. The BURDEN team checks your registration, leadership and
+          references before you can receive gifts.
+        </p>
+        <Button variant="ghost" onClick={() => navigate({ name: 'apply' })}>Apply to join</Button>
+      </div>
     </main>
   )
 }
@@ -308,6 +323,81 @@ function PostUpdate({ church, act, navigate }) {
   )
 }
 
+// New wording for a burden. It goes to a BURDEN reviewer first, because
+// "where the money goes" is a promise to givers. The goal is not editable here.
+function EditBurden({ church, act, navigate }) {
+  const [campaignId, setCampaignId] = useState(church.burdens[0]?.id ?? '')
+  const c = campaigns.find(x => x.id === campaignId)
+  const current = c && {
+    summary: c.summary, objective: c.objective, currentState: c.currentState,
+    moneyWorkflow: (c.moneyWorkflow || []).join('\n'), prayerFocus: c.prayerGroup?.focusLine ?? '',
+  }
+  const [draft, setDraft] = useState(current)
+  useEffect(() => { setDraft(current) }, [campaignId]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!c || !draft) return null
+  const changed = EDITABLE.filter(f => (draft[f.id] ?? '').trim() !== (current[f.id] ?? '').trim())
+  const flags = flagsFor(changed.map(f => draft[f.id]).join('\n'))
+  const edits = (church.edits || []).filter(e => e.campaign_id === campaignId)
+  const pending = edits.find(e => e.status === 'pending')
+  const lastDecided = edits.find(e => e.status === 'approved' || e.status === 'rejected')
+
+  function submit() {
+    const fields = {}
+    for (const f of changed) {
+      fields[f.id] = f.list ? draft[f.id].split('\n').map(x => x.trim()).filter(Boolean) : draft[f.id].trim()
+    }
+    act('edit', { campaignId, fields }, 'Sent to BURDEN for review. The burden page shows the new wording once it is approved.')
+  }
+
+  return (
+    <section style={{ paddingTop: 28, maxWidth: 720 }}>
+      <p style={{ fontSize: 13, color: colors.inkSoft, lineHeight: 1.7, marginBottom: 24 }}>
+        Change how your burden is described. A BURDEN reviewer reads every change before it is public, because
+        givers rely on it — especially where the money goes. Write plainly; please don't use deadlines or promise
+        blessings for giving. To change the goal, write to the BURDEN team.
+      </p>
+      {pending && (
+        <div role="status" style={{ border: '1px solid ' + colors.rule, padding: 16, marginBottom: 24, fontSize: 13 }}>
+          <Badge tone="warn">Waiting for review</Badge>{' '}
+          <span style={{ marginLeft: 8 }}>Sent {formatDay(pending.created_at)} — {Object.keys(pending.fields).length} part{Object.keys(pending.fields).length > 1 ? 's' : ''} changed. Sending again replaces it.</span>
+        </div>
+      )}
+      {!pending && lastDecided && (
+        <div role="status" style={{ border: '1px solid ' + colors.rule, padding: 16, marginBottom: 24, fontSize: 13, lineHeight: 1.6 }}>
+          {lastDecided.status === 'approved' ? <Badge tone="trust">Approved</Badge> : <Badge tone="warn">Not approved</Badge>}
+          <span style={{ marginLeft: 8 }}>Your last change ({formatDay(lastDecided.created_at)}).</span>
+          {lastDecided.review_note && <div style={{ marginTop: 8, color: colors.inkSoft }}>Reviewer: {lastDecided.review_note}</div>}
+        </div>
+      )}
+      {church.burdens.length > 1 && (
+        <>
+          <label style={fieldLabel} htmlFor="ed-burden">Burden</label>
+          <select id="ed-burden" value={campaignId} onChange={e => setCampaignId(e.target.value)} style={{ ...input, marginBottom: 16 }}>
+            {church.burdens.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
+          </select>
+        </>
+      )}
+      {EDITABLE.map(f => (
+        <div key={f.id} style={{ marginBottom: 20 }}>
+          <label style={fieldLabel} htmlFor={`ed-${f.id}`}>{f.label}{f.list ? ' — one step per line' : ''}</label>
+          <textarea id={`ed-${f.id}`} value={draft[f.id]} rows={f.id === 'summary' || f.id === 'prayerFocus' ? 2 : f.list ? 6 : 4}
+            maxLength={f.list ? 3200 : f.max} onChange={e => setDraft(d => ({ ...d, [f.id]: e.target.value }))}
+            style={{ ...input, fontFamily: 'inherit', lineHeight: 1.6, resize: 'vertical' }} />
+        </div>
+      ))}
+      {flags.length > 0 && (
+        <p role="note" style={{ fontSize: 13, color: colors.fundLow, lineHeight: 1.6 }}>
+          Some wording may read as {flags.join(' or ')} language. The reviewer will look closely — consider rewording.
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Button disabled={!changed.length} onClick={submit}>Send {changed.length || ''} change{changed.length === 1 ? '' : 's'} for review</Button>
+        <Button variant="ghost" onClick={() => navigate({ name: 'campaign', id: campaignId })}>See the burden page</Button>
+      </div>
+    </section>
+  )
+}
+
 function Payout({ church, act }) {
   const [method, setMethod] = useState('momo')
   const [network, setNetwork] = useState('mtn')
@@ -415,7 +505,7 @@ function Team({ church, act }) {
 
 // ── Demo data, in the server's shape ────────────────────────────────────
 
-function demoDashboard(churchId, gifts, churchUpdates, demoPayouts) {
+function demoDashboard(churchId, gifts, churchUpdates, demoPayouts, edits = []) {
   const ch = churches.find(c => c.id === churchId)
   const mine = campaigns.filter(c => c.churchId === churchId)
   const lead = mine[0]?.team?.[0]
@@ -440,9 +530,10 @@ function demoDashboard(churchId, gifts, churchUpdates, demoPayouts) {
     gifts: view.sort((a, b) => String(b.date).localeCompare(String(a.date))),
     updates: churchUpdates.filter(u => mine.some(c => c.id === u.campaignId)).sort((a, b) => b.date.localeCompare(a.date)),
     payout: saved
-      ? { method: saved.method, network: saved.network, accountName: saved.accountName, account: '•••• ' + String(saved.accountNumber).slice(-4), verified: false }
+      ? { method: saved.method, network: saved.network, accountName: saved.accountName, account: '•••• ' + String(saved.accountNumber).slice(-4), verified: !!saved.verified }
       : { method: ch.payoutTo.includes('MoMo') ? 'momo' : 'bank', network: ch.payoutTo.includes('MoMo') ? 'mtn' : ch.payoutTo.split(' account')[0], accountName: ch.name, account: '•••• 4567', verified: true },
     team: (mine[0]?.team ?? []).map((m, i) => ({ display_name: m.name, role_title: m.role, role: i === 0 ? 'admin' : 'editor' })),
+    edits: edits.filter(e => e.church_id === churchId),
   }
 }
 

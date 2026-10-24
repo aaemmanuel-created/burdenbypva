@@ -104,6 +104,11 @@ export async function insertGift(
   });
   if (error) throw error;
   if (input.notify_updates) extra = { ...extra, notify_updates: true };
+  if (input.fundraiser_id) {
+    // Only an open fundraiser for this same burden counts the gift.
+    const { data: f } = await db.from('fundraisers').select('campaign_id, status').eq('id', input.fundraiser_id).maybeSingle();
+    if (f?.status === 'open' && f.campaign_id === input.campaign_id) extra = { ...extra, fundraiser_id: input.fundraiser_id };
+  }
   if (Object.keys(extra).length) await db.from('gifts').update(extra).eq('id', id);
   if (input.message) {
     await db.from('support_messages').insert({
