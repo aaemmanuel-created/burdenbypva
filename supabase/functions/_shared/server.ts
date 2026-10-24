@@ -6,6 +6,7 @@ import type { ChargeConfig, GiftInput, Provider } from './gift-input.ts';
 import { randomToken, sha256Hex, timingSafeEqual } from './crypto.ts';
 import { type GiftRow, type Secrets, type Verification, verify } from './providers.ts';
 import { activatePlan, createPlan } from './plans.ts';
+import { reviewSupportMessage } from './support.ts';
 
 const env = (name: string) => Deno.env.get(name) ?? undefined;
 
@@ -97,6 +98,12 @@ export async function insertGift(input: GiftInput, testMode: boolean, extra: Rec
   });
   if (error) throw error;
   if (Object.keys(extra).length) await db.from('gifts').update(extra).eq('id', id);
+  if (input.message) {
+    await db.from('support_messages').insert({
+      gift_id: id, campaign_id: input.campaign_id, message: input.message,
+      display_name: input.anonymous ? 'Anonymous' : (input.donor_name ?? 'Anonymous'),
+    });
+  }
   const plan = input.recurring ? await createPlan(input, id as string) : null;
   return { gift: (await loadGift(id as string))!, token, plan };
 }
@@ -141,6 +148,8 @@ export async function applyVerification(gift: FullGift, v: Verification, source:
     });
     // The first gift of a monthly plan switches the plan on.
     if (moved && gift.plan_id) await activatePlan(gift, v);
+    // Only givers' words are published, and only after the review queue.
+    if (moved) await reviewSupportMessage(gift.id);
   } else if (v.outcome === 'failed') {
     await transition(gift.id, 'failed', v.reason, source);
   } else if (v.outcome === 'cancelled') {

@@ -24,11 +24,19 @@ export function updatesFor(campaignId) {
   return [...(community.updates[campaignId] || [])].sort((a, b) => b.date.localeCompare(a.date))
 }
 
-// Seeded words plus any the donor wrote with their own gifts, newest first.
-export function supportFor(campaignId, gifts = []) {
-  const own = gifts
-    .filter(g => g.campaignId === campaignId && g.message && isGiven(g))
-    .map(g => ({ name: g.anonymous ? 'Anonymous' : (g.donorName || 'You'), date: g.timestamp, message: g.message, own: true }))
+// Words of support, newest first. Live: only what the server's review queue
+// approved, plus the donor's own words still waiting (shown to them alone).
+// Demo: the seeded words plus the donor's own.
+export function supportFor(campaignId, gifts = [], liveWords = null) {
+  const mine = gifts.filter(g => g.campaignId === campaignId && g.message && isGiven(g))
+  const name = g => (g.anonymous ? 'Anonymous' : (g.donorName || 'You'))
+  if (liveWords) {
+    const waiting = mine
+      .filter(g => !['approved', 'rejected'].includes(g.supportStatus))
+      .map(g => ({ name: name(g), date: g.timestamp, message: g.message, own: true, waiting: true }))
+    return [...waiting, ...liveWords].sort((a, b) => b.date.localeCompare(a.date))
+  }
+  const own = mine.map(g => ({ name: name(g), date: g.timestamp, message: g.message, own: true }))
   const seeded = community.support[campaignId] || []
   return [...own, ...seeded].sort((a, b) => b.date.localeCompare(a.date))
 }

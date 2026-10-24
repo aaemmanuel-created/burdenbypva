@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -7,7 +7,8 @@ import { Badge, Button, FundingSquare, Label, Progress, Rule, Tile } from '../co
 import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '../components/Community';
 import { colors, font, formatMoney, tile } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
-import { findFundraiser, fundraisersFor, supportFor, updatesFor } from '../lib/community';
+import { findFundraiser, fundraisersFor, supportFor, updatesFor, type SupportWord } from '../lib/community';
+import { fetchSupportWords, liveCheckout } from '../lib/payments';
 import type { RootStackParamList } from '../navigation/types';
 
 const ITEMS = [
@@ -22,6 +23,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Campaign'>;
 export default function CampaignScreen({ route, navigation }: Props) {
   const { gifts, fundraisers, joinedPrayer, togglePrayer } = useGifts();
   const [sharing, setSharing] = useState(false);
+  // Live: only words the review queue approved (null until loaded / in demo).
+  const [liveWords, setLiveWords] = useState<SupportWord[] | null>(null);
+  useEffect(() => {
+    if (!liveCheckout) return;
+    let stop = false;
+    fetchSupportWords(route.params.campaignId)
+      .then((r) => { if (!stop) setLiveWords(r.words); })
+      .catch(() => { if (!stop) setLiveWords([]); });
+    return () => { stop = true; };
+  }, [route.params.campaignId]);
   const scroll = useRef<ScrollView>(null);
   const { fundraiserId } = route.params;
   const campaign = campaigns.find((c) => c.id === route.params.campaignId);
@@ -35,7 +46,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
   const church = churches.find((ch) => ch.id === campaign.churchId)!;
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
   const updates = updatesFor(campaign.id);
-  const words = supportFor(campaign.id, gifts);
+  const words = supportFor(campaign.id, gifts, liveWords);
   const carrying = fundraisersFor(campaign.id, fundraisers, gifts);
   const sharedFundraiser = findFundraiser(fundraiserId, fundraisers);
 

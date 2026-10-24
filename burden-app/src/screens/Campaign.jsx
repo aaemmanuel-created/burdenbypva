@@ -4,6 +4,7 @@ import { Button, Label, Rule, Progress, Badge, Tile, FundingSquare, formatMoney 
 import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '../components/Community.jsx'
 import { findFundraiser, fundraisersFor, supportFor, updatesFor } from '../lib/community.js'
 import { campaigns, churches } from '../data/mock.js'
+import { fetchSupportWords, liveCheckout } from '../lib/payments.js'
 
 // Burden detail. The user-facing word is "burden" — the data model still
 // calls these "campaigns" internally. Every burden surfaces five things
@@ -18,6 +19,14 @@ import { campaigns, churches } from '../data/mock.js'
 
 export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts = [], fundraisers = [], fundraiserId }) {
   const [sharing, setSharing] = useState(false)
+  // Live: only words the review queue approved (null until loaded / in demo).
+  const [liveWords, setLiveWords] = useState(null)
+  useEffect(() => {
+    if (!liveCheckout) return
+    let stop = false
+    fetchSupportWords(id).then(r => { if (!stop) setLiveWords(r.words) }).catch(() => { if (!stop) setLiveWords([]) })
+    return () => { stop = true }
+  }, [id])
   const fundraisersRef = useRef(null)
   // A shared fundraiser link lands on that fundraiser.
   useEffect(() => {
@@ -35,7 +44,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
   const church = churches.find(ch => ch.id === burden.churchId)
   const pct = Math.round((burden.raised / burden.goal) * 100)
   const updates = updatesFor(burden.id)
-  const words = supportFor(burden.id, gifts)
+  const words = supportFor(burden.id, gifts, liveWords)
   const carrying = fundraisersFor(burden.id, fundraisers, gifts)
   const sharedFundraiser = findFundraiser(fundraiserId, fundraisers)
 

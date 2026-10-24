@@ -49,3 +49,10 @@ verify_jwt = false
 
 [functions.ussd]
 verify_jwt = false
+
+# Added 2026-10-24: words of support review queue.
+[functions.support-messages]
+verify_jwt = false
+
+[functions.moderation-queue]
+verify_jwt = false

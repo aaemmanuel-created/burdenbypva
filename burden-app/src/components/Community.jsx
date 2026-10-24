@@ -59,12 +59,15 @@ export function SupportSection({ words, onGive }) {
     <div>
       <SectionHead label="Words of support" count={words.length} />
       <p style={{ ...body, fontSize: 12, color: colors.inkMuted }}>
-        Givers can leave a few words or a prayer with their gift. Amounts are never shown.
+        Givers can leave a few words or a prayer with their gift. Every message is checked before it appears,
+        and amounts are never shown.
       </p>
       {shown.map((w, i) => (
         <div key={w.date + i} style={{ padding: '16px 0', borderBottom: '1px solid ' + colors.ruleSoft }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: colors.ink }}>{w.name}{w.own ? ' (you)' : ''}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: colors.ink }}>
+              {w.name}{w.waiting ? ' (you — only you can see this until it is reviewed)' : w.own ? ' (you)' : ''}
+            </span>
             <span style={meta}>{formatDay(w.date)}</span>
           </div>
           <p style={{ ...body, marginTop: 6, color: colors.ink }}>{w.message}</p>

@@ -51,10 +51,10 @@ export default function GiftScreen({ route, navigation }: Props) {
     const started = Date.now();
     async function refresh() {
       try {
-        const { gift: server, events, plan } = await fetchGiftStatus(id, token!);
+        const { gift: server, events, plan, supportStatus } = await fetchGiftStatus(id, token!);
         if (stopped) return;
         setError('');
-        updateGift(id, { ...server, status: server.status as GiftStatus, events, ...(plan ? { plan } : {}) });
+        updateGift(id, { ...server, status: server.status as GiftStatus, events, ...(plan ? { plan } : {}), supportStatus });
         if (server.status === 'initiated' && Date.now() - started < POLL_FOR_MS) {
           timer = setTimeout(refresh, POLL_MS);
         }
@@ -108,6 +108,14 @@ export default function GiftScreen({ route, navigation }: Props) {
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      {gift.message && !declined ? (
+        <View style={{ marginTop: 32 }}>
+          <Label style={{ marginBottom: 12 }}>Your words of support</Label>
+          <Text style={[styles.body, { color: colors.ink }]}>"{gift.message}"</Text>
+          <Text style={[styles.sub, { marginTop: 8 }]}>{supportNote(gift)}</Text>
+        </View>
+      ) : null}
+
       {gift.recurring && !declined && <MonthlyGift gift={gift} live={live} />}
 
       <View style={{ gap: 8, marginTop: 32 }}>
@@ -137,6 +145,17 @@ export default function GiftScreen({ route, navigation }: Props) {
       )}
     </ScrollView>
   );
+}
+
+// Where the giver's words stand in the review queue (supabase moderation.ts).
+function supportNote(gift: Gift): string {
+  if (!gift.live) return 'Demo — in the live app every message is checked before others see it.';
+  switch (gift.supportStatus) {
+    case 'approved': return 'Checked and shown on the burden page.';
+    case 'rejected': return 'These words could not be published. Links, contact details and requests for money are not allowed. Your gift is unaffected.';
+    case 'held': return 'A BURDEN reviewer will read them before they appear.';
+    default: return 'They will be checked once your payment is confirmed, then shown on the burden page.';
+  }
 }
 
 // A monthly gift: whether it is running, how each month is paid, and a way to stop it.

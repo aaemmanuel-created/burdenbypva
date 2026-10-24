@@ -82,6 +82,8 @@ export type Gift = {
   momo?: string;
   // Where the church is paid, e.g. "MTN MoMo business wallet".
   payoutTo?: string;
+  // Where the giver's words of support are in the review queue (live gifts).
+  supportStatus?: string | null;
   // Monthly gifts: the plan and the donor's private key to stop it.
   planId?: string;
   planToken?: string;

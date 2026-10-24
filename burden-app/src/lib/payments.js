@@ -77,6 +77,12 @@ export const MOMO_NETWORKS = [
 // The USSD short code, once BURDEN rents one (e.g. "*713*55#"). Unset: not shown.
 export const USSD_CODE = import.meta.env.VITE_BURDEN_USSD_CODE || ''
 
+// Approved words of support for one burden (the review queue's public end).
+// → { words: [{ name, message, date }] }
+export function fetchSupportWords(campaignId) {
+  return call(`support-messages?campaign=${encodeURIComponent(campaignId)}`, { method: 'GET' })
+}
+
 // → { gift, events, plan }
 export function fetchGiftStatus(id, token) {
   return call(`gift-status?gift=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`, { method: 'GET' })

@@ -91,11 +91,19 @@ export type MomoNetworkId = (typeof MOMO_NETWORKS)[number]['id'];
 // The USSD short code, once BURDEN rents one (e.g. "*713*55#"). Unset: not shown.
 export const USSD_CODE = process.env.EXPO_PUBLIC_BURDEN_USSD_CODE ?? '';
 
+// Approved words of support for one burden (the review queue's public end).
+export function fetchSupportWords(campaignId: string) {
+  return call<{ words: { name: string; message: string; date: string }[] }>(
+    `support-messages?campaign=${encodeURIComponent(campaignId)}`, { method: 'GET' },
+  );
+}
+
 export function fetchGiftStatus(id: string, token: string) {
   return call<{
     gift: Record<string, any>;
     events: { step: string; occurred_at: string; note: string | null }[];
     plan?: { status: string; note?: string | null; method?: string | null; nextChargeAt?: string | null } | null;
+    supportStatus?: string | null;
   }>(
     `gift-status?gift=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`,
     { method: 'GET' },

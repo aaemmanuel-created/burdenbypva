@@ -37,6 +37,8 @@ export type GiftInput = {
   donor_email: string;
   provider: Provider;
   return_url: string;
+  // Words of support, checked before anyone else sees them (moderation.ts).
+  message: string | null;
 };
 
 type Result = { ok: true; value: GiftInput } | { ok: false; error: string };
@@ -114,6 +116,7 @@ export function parseGiftInput(body: unknown, charge: ChargeConfig, allowedRetur
       donor_email: email,
       provider,
       return_url: returnUrl,
+      message: text(b.message, 280),
     },
   };
 }

@@ -16,7 +16,7 @@ export const SITE_URL = 'https://aaemmanuel-created.github.io/burdenbypva/';
 export const MESSAGE_MAX = 280;
 
 export type Update = { date: string; author: string; role: string; title: string; body: string };
-export type SupportWord = { name: string; date: string; message: string; own?: boolean };
+export type SupportWord = { name: string; date: string; message: string; own?: boolean; waiting?: boolean };
 export type Fundraiser = {
   id: string; campaignId?: string; name: string; note: string;
   goal: number; raised: number; started: string; own?: boolean;
@@ -37,11 +37,19 @@ export function updatesFor(campaignId: string): Update[] {
   return [...(updates[campaignId] || [])].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-// Seeded words plus any the donor wrote with their own gifts, newest first.
-export function supportFor(campaignId: string, gifts: Gift[] = []): SupportWord[] {
-  const own = gifts
-    .filter((g) => g.campaignId === campaignId && g.message && isGiven(g))
-    .map((g) => ({ name: g.anonymous ? 'Anonymous' : g.donorName || 'You', date: g.timestamp, message: g.message!, own: true }));
+// Words of support, newest first. Live: only what the server's review queue
+// approved, plus the donor's own words still waiting (shown to them alone).
+// Demo: the seeded words plus the donor's own.
+export function supportFor(campaignId: string, gifts: Gift[] = [], liveWords: SupportWord[] | null = null): SupportWord[] {
+  const mine = gifts.filter((g) => g.campaignId === campaignId && g.message && isGiven(g));
+  const name = (g: Gift) => (g.anonymous ? 'Anonymous' : g.donorName || 'You');
+  if (liveWords) {
+    const waiting = mine
+      .filter((g) => !['approved', 'rejected'].includes(g.supportStatus ?? ''))
+      .map((g) => ({ name: name(g), date: g.timestamp, message: g.message!, own: true, waiting: true }));
+    return [...waiting, ...liveWords].sort((a, b) => b.date.localeCompare(a.date));
+  }
+  const own = mine.map((g) => ({ name: name(g), date: g.timestamp, message: g.message!, own: true }));
   return [...own, ...(support[campaignId] || [])].sort((a, b) => b.date.localeCompare(a.date));
 }
 

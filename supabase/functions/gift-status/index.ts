@@ -40,8 +40,11 @@ Deno.serve(async (req) => {
       plan = { id: data.id, status: data.status, note: data.status_note, method: data.method, nextChargeAt: data.next_charge_at };
     }
   }
+  // The giver's own words of support and where they are in the review queue.
+  const { data: words } = await db.from('support_messages').select('status').eq('gift_id', g.id).maybeSingle();
   return json({
     plan,
+    supportStatus: words?.status ?? null,
     gift: {
       id: g.id,
       status: g.status,

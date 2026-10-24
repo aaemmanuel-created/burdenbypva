@@ -60,11 +60,13 @@ export function SupportSection({ words, onGive }: { words: SupportWord[]; onGive
   return (
     <View>
       <SectionHead label="Words of support" count={words.length} />
-      <Text style={styles.note}>Givers can leave a few words or a prayer with their gift. Amounts are never shown.</Text>
+      <Text style={styles.note}>Givers can leave a few words or a prayer with their gift. Every message is checked before it appears, and amounts are never shown.</Text>
       {shown.map((w, i) => (
         <View key={w.date + i} style={styles.item}>
           <View style={styles.wordHead}>
-            <Text style={styles.wordName}>{w.name}{w.own ? ' (you)' : ''}</Text>
+            <Text style={styles.wordName}>
+              {w.name}{w.waiting ? ' (you — only you can see this until it is reviewed)' : w.own ? ' (you)' : ''}
+            </Text>
             <Text style={styles.meta}>{formatDay(w.date)}</Text>
           </View>
           <Text style={[styles.body, { color: colors.ink, marginTop: 6 }]}>{w.message}</Text>
