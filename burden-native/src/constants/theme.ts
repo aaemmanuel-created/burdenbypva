@@ -19,13 +19,13 @@ export const colors = {
 
   // Glassy navy tile palette — used for cards, tiles, surfaces that should "pop".
   navy:      '#3a69ad',   // lightened 2026-10-17 — was #0b1a35 (too dark on phone)
-  navyTop:   '#5a8bd1',   // tile gradient: light top …
+  navyTop:   '#3563a6',   // tile gradient top — was #5a8bd1; darkened 2026-10-25 for WCAG AA text contrast
   navyBottom:'#2d5797',   // … to deeper bottom
   navyDeep:  '#050c1d',
   navyEdge:  '#6b95d3',
   navyInk:   '#eef2fb',
   navySoft:  '#e8eef9',
-  navyMuted: '#cfdcf2',
+  navyMuted: '#ebf0fa',   // was #cfdcf2 — now ≥4.5:1 on every part of the tile
   navyRule:  'rgba(255,255,255,0.10)',
 
   // Funding banner tones

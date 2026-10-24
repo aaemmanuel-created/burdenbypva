@@ -22,15 +22,15 @@ export const colors = {
 
   // Blue tile palette — lightened 2026-10-17 to match the app (was #0b1a35).
   navy:        '#3a69ad',
-  navyTop:     '#5a8bd1',   // tile gradient: light top …
+  navyTop:     '#3563a6',   // tile gradient top — was #5a8bd1; darkened 2026-10-25 so text on tiles passes WCAG AA
   navyBottom:  '#2d5797',   // … to deeper bottom
   navyDeep:    '#1d3a6e',   // text on white buttons inside a tile
   navyEdge:    '#6b95d3',
   navyInk:     '#eef2fb',   // primary text on blue
   navySoft:    '#e8eef9',   // secondary text on blue
-  navyMuted:   '#cfdcf2',   // tertiary text on blue
+  navyMuted:   '#ebf0fa',   // tertiary text on blue — was #cfdcf2 (2.5–4:1); now ≥4.5:1 everywhere on the tile
   navyRule:    'rgba(255,255,255,0.10)',
-  navyHi:      'rgba(255,255,255,0.10)',  // top sheen
+  navyHi:      'rgba(255,255,255,0.06)',  // top sheen — was 0.10; softer so the top keeps 4.5:1 contrast
   navyLo:      'rgba(0,0,0,0.38)',        // bottom shadow inside tile
 
   // Funding square tones: red (under a third), amber (halfway), green (almost / fully)
