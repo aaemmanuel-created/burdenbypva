@@ -14,6 +14,7 @@ import {
 import type { Gift } from '../data/mock';
 import { demoEvents, demoHoldUntil } from '../lib/giftTimeline';
 import { MESSAGE_MAX, findFundraiser } from '../lib/community';
+import { haptic } from '../lib/useHaptic';
 
 const PRESETS = [5, 25, 100, 500];
 
@@ -64,6 +65,7 @@ export default function GiveScreen({ route, navigation }: Props) {
 
   async function submit() {
     if (!canSubmit || !campaign || !church) return;
+    haptic(); // as the web's Give button: a short pulse before the gift is recorded
     setError('');
     const timestamp = new Date().toISOString();
     const details = {

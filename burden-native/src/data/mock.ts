@@ -35,6 +35,12 @@ export type Campaign = {
   // The people carrying this burden (shown as profile tiles on its page).
   // `photo` is a face photo supplied by the church; initials show until then.
   team?: TeamMember[];
+  // The four sections every burden shows (web: Campaign.jsx): what it
+  // achieves, where things stand, how the money moves, and its prayer group.
+  objective: string;
+  currentState: string;
+  moneyWorkflow: string[];
+  prayerGroup: { members: number; recentPrayers: number; focusLine: string };
 };
 
 export type TeamMember = { role: string; name: string; photo?: ImageSourcePropType };
@@ -163,6 +169,16 @@ export const churches: Church[] = [
 export const campaigns: Campaign[] = [
   {
     id: 'cmp_grace_school',
+    objective: "Cover all term-one learning materials and the daily lunch for 84 children — most from single-parent households in Eastleigh — so attendance does not depend on whether a family can afford books that month.",
+    currentState: "57% funded. Books and uniforms already procured for 48 of the 84 children. Lunch programme running daily, currently funded month-to-month. We are 21 days from term end — remainder covers the final 36 children and one term of lunches.",
+    moneyWorkflow: [
+      "Donors give via BURDEN.",
+      "Funds held in BURDEN escrow for 3 banking days, then released to Grace Community Church's verified payout account at Equity Bank, Nairobi.",
+      "Sarah Njeri (programme coordinator) requests disbursements against three pre-agreed milestones: books procured, uniforms delivered, lunch month funded.",
+      "James Karanja (finance steward) signs every disbursement; Rev. Wanjiku co-signs anything above $500.",
+      "Monthly receipts and photos published as an impact update on this burden's page.",
+    ],
+    prayerGroup: { members: 64, recentPrayers: 18, focusLine: "Pray for the 36 children still waiting on materials, and for the teachers running the Saturday programme alongside their weekday work." },
     churchId: 'ch_nairobi_grace',
     title: 'Saturday School — Term Materials',
     summary:
@@ -179,6 +195,16 @@ export const campaigns: Campaign[] = [
   },
   {
     id: 'cmp_redeemer_clinic',
+    objective: "Run four weekend medical outreach clinics in Q2 across Makoko and Ajegunle, providing free paediatric, maternal, and primary care to roughly 900 patients who have no other access to a doctor.",
+    currentState: "70% funded. Two of four clinics already delivered: 487 patients seen so far, 62 referrals into ongoing care. Medicines and PPE stocked for the remaining two clinics. Outstanding gap is clinician honoraria and fuel for the mobile unit.",
+    moneyWorkflow: [
+      "Donors give via BURDEN.",
+      "Funds held in escrow for 3 banking days, then released to Redeemer Chapel Lagos's verified payout account at Zenith Bank, Nigeria.",
+      "Dr. Ade­bowale signs off on the medical supply list each clinic; Mrs. Okonkwo countersigns disbursements.",
+      "Two-person rule on every withdrawal above ₦100,000 (approximately $130).",
+      "Per-clinic report published within 7 days, with patient counts and consumables actually used.",
+    ],
+    prayerGroup: { members: 142, recentPrayers: 41, focusLine: "Pray for safe travel for the clinical team into Makoko this Saturday, and for the patients they will see — particularly the expectant mothers." },
     churchId: 'ch_lagos_redeemer',
     title: 'Mobile Medical Outreach — Q2',
     summary:
@@ -195,6 +221,16 @@ export const campaigns: Campaign[] = [
   },
   {
     id: 'cmp_andrew_bursary',
+    objective: "Fund a full year of senior secondary school fees and WAEC exam registration for 22 students from the Osu parish district whose families cannot meet the September 2026 fee deadline.",
+    currentState: "66% funded. 14 of 22 student placements confirmed and assigned to specific donors. Outstanding gap covers fees for 8 remaining students plus exam registration for all 22 in May 2027.",
+    moneyWorkflow: [
+      "Donors give via BURDEN.",
+      "Funds held in escrow for 3 banking days, then released to St. Andrew's Presbyterian's verified MTN MoMo business wallet.",
+      "Bursary committee disburses directly to the schools — money does not pass through students or families.",
+      "Mr. Ofori (CA) reconciles every term against published school fee schedules.",
+      "Names of supported students (anonymised) and grades published at the end of each term.",
+    ],
+    prayerGroup: { members: 31, recentPrayers: 9, focusLine: "Pray for the 22 students stepping into senior secondary — especially the eight whose places are not yet confirmed, and for their families." },
     churchId: 'ch_accra_st_andrew',
     title: 'Osu Bursary Fund — 2026 Intake',
     summary:
@@ -211,6 +247,16 @@ export const campaigns: Campaign[] = [
   },
   {
     id: 'cmp_allnations_meals',
+    objective: "Fund three months of the Wednesday evening community meal in Peckham — roughly 120 neighbours weekly — covering groceries, cooking gas, and a small honorarium for the volunteer kitchen lead.",
+    currentState: "54% funded. 14 of the 26 weeks in this funding window already covered. Meal continues uninterrupted for now from the church's reserve, but reserve is depleted as of week 16.",
+    moneyWorkflow: [
+      "Donors give via BURDEN.",
+      "Funds held in escrow for 3 banking days, then released to All Nations Fellowship's verified payout account at Lloyds Bank, UK.",
+      "Daniel Okafor pays the registered cash-and-carry directly each week — no cash handled by volunteers.",
+      "Auntie Funke submits a weekly head-count and a receipts pack to the treasurer.",
+      "Monthly summary published on this burden's page.",
+    ],
+    prayerGroup: { members: 47, recentPrayers: 12, focusLine: "Pray for the neighbours who come every Wednesday — many of whom come for the company as much as the meal — and for the volunteers cooking." },
     churchId: 'ch_london_allnations',
     title: 'Wednesday Community Meal',
     summary:
@@ -226,6 +272,16 @@ export const campaigns: Campaign[] = [
   },
   {
     id: 'cmp_lighthouse_rebuild',
+    objective: "Rebuild the Lighthouse Bible Church fellowship hall — roof, electricals, and basic furnishing — destroyed by Typhoon Karding. The hall hosts the youth tutoring centre, the Saturday women's group, and Sunday overflow.",
+    currentState: "59% funded. Roof framing complete and inspected. Outstanding scope: roof skin, electrical rewire and inspection, sound system, and 12 fellowship tables and seating for 80.",
+    moneyWorkflow: [
+      "Donors give via BURDEN.",
+      "Funds held in escrow for 3 banking days, then released to Lighthouse Bible Church's verified payout account at BPI, Philippines.",
+      "Marites Cruz (CPA) releases against signed contractor invoices only — no advance payments.",
+      "Engr. Santos signs off every milestone (framing, skin, electrical, fitout) before the next disbursement.",
+      "Photographs and inspection notes published with each milestone.",
+    ],
+    prayerGroup: { members: 218, recentPrayers: 73, focusLine: "Pray for safe work on the roof in the coming weeks, and for the youth currently meeting outside while the hall is unfinished." },
     churchId: 'ch_manila_lighthouse',
     title: 'Fellowship Hall Rebuild',
     summary:

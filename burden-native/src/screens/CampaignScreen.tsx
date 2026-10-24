@@ -20,7 +20,7 @@ const ITEMS = [
 type Props = NativeStackScreenProps<RootStackParamList, 'Campaign'>;
 
 export default function CampaignScreen({ route, navigation }: Props) {
-  const { gifts, fundraisers } = useGifts();
+  const { gifts, fundraisers, joinedPrayer, togglePrayer } = useGifts();
   const [sharing, setSharing] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const { fundraiserId } = route.params;
@@ -128,6 +128,45 @@ export default function CampaignScreen({ route, navigation }: Props) {
 
       <Rule soft />
 
+      {/* The four sections every burden shows (web: Campaign.jsx) */}
+      <View style={{ padding: 20 }}>
+        <Label>Objective</Label>
+        <Text style={[styles.body, { color: colors.ink }]}>{campaign.objective}</Text>
+      </View>
+
+      <Rule soft />
+
+      <View style={{ padding: 20 }}>
+        <Label>Current state</Label>
+        <Text style={styles.body}>{campaign.currentState}</Text>
+      </View>
+
+      <Rule soft />
+
+      <View style={{ padding: 20 }}>
+        <Label>How the money moves</Label>
+        <View style={{ marginTop: 14 }}>
+          {campaign.moneyWorkflow.map((step, i) => (
+            <View key={i} style={styles.flowRow}>
+              <Text style={styles.flowNum}>{String(i + 1).padStart(2, '0')}</Text>
+              <Text style={styles.flowText}>{step}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <Rule soft />
+
+      <View style={{ padding: 20 }}>
+        <PrayerGroup
+          group={campaign.prayerGroup}
+          joined={joinedPrayer.includes(campaign.id)}
+          onToggle={() => togglePrayer(campaign.id)}
+        />
+      </View>
+
+      <Rule soft />
+
       {/* Words of support — from givers, never with the amount */}
       <View style={{ padding: 20 }}>
         <SupportSection words={words} onGive={() => navigation.navigate('Give', { campaignId: campaign.id })} />
@@ -189,6 +228,33 @@ export default function CampaignScreen({ route, navigation }: Props) {
         onPoster={() => navigation.navigate('Poster', { campaignId: campaign.id, fundraiserId: sharedFundraiser?.id })}
       />
     </ScrollView>
+  );
+}
+
+// Prayer is specific: a focus line from the team, and a group to join.
+// Mirrors PrayerGroup in burden-app/src/screens/Campaign.jsx.
+function PrayerGroup({
+  group, joined, onToggle,
+}: { group: { members: number; recentPrayers: number; focusLine: string }; joined: boolean; onToggle: () => void }) {
+  const members = group.members + (joined ? 1 : 0);
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+        <Label>Prayer group</Label>
+        <Text style={styles.prayerCount}>
+          {members.toLocaleString()} praying · {group.recentPrayers} prayers this week
+        </Text>
+      </View>
+      <Text style={[styles.body, { color: colors.ink }]}>{group.focusLine}</Text>
+      <Text style={[styles.smallNote, { lineHeight: 18 }]}>
+        Prayer on BURDEN is specific — when you join this group you'll see weekly updates from the team on what to
+        pray for, and you can post prayers and short scriptures alongside other members of the group. Prayer is not a
+        substitute for giving; it sits alongside it.
+      </Text>
+      <Button variant={joined ? 'ghost' : 'primary'} style={{ marginTop: 18, alignSelf: 'flex-start' }} onPress={onToggle}>
+        {joined ? 'You are in this prayer group ✓' : 'Join the prayer group'}
+      </Button>
+    </View>
   );
 }
 
@@ -254,6 +320,13 @@ const styles = StyleSheet.create({
   },
   shareBtnText: { fontFamily: font.bold, fontSize: 12, letterSpacing: 1, color: tile.ink },
   body: { fontFamily: font.regular, fontSize: 13, lineHeight: 22, color: colors.inkSoft, marginTop: 12 },
+  flowRow: {
+    flexDirection: 'row', gap: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: colors.ruleSoft,
+  },
+  flowNum: { width: 22, fontFamily: font.regular, fontSize: 12, letterSpacing: 1, color: colors.inkMuted, lineHeight: 21 },
+  flowText: { flex: 1, fontFamily: font.regular, fontSize: 13, lineHeight: 21, color: colors.ink },
+  prayerCount: { fontFamily: font.regular, fontSize: 11, letterSpacing: 1, color: colors.inkMuted, flexShrink: 1, textAlign: 'right' },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
