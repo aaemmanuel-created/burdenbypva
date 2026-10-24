@@ -13,7 +13,7 @@ const env = (n: string) => Deno.env.get(n) ?? undefined;
 
 // ── Receipts ────────────────────────────────────────────────────────────
 
-async function sendEmail(to: string, subject: string, text: string): Promise<boolean> {
+export async function sendEmail(to: string, subject: string, text: string): Promise<boolean> {
   const token = env('POSTMARK_SERVER_TOKEN');
   const from = env('RECEIPT_FROM'); // e.g. "BURDEN <receipts@your-domain>"
   if (!token || !from) { console.warn('receipt not emailed: POSTMARK_SERVER_TOKEN / RECEIPT_FROM not set'); return false; }

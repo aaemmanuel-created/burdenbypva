@@ -39,6 +39,8 @@ export type GiftInput = {
   return_url: string;
   // Words of support, checked before anyone else sees them (moderation-logic.ts).
   message: string | null;
+  // Opted in to emails when the church posts an update on this burden.
+  notify_updates: boolean;
 };
 
 type Result = { ok: true; value: GiftInput } | { ok: false; error: string };
@@ -119,6 +121,7 @@ export function parseGiftInput(body: unknown, charge: ChargeConfig, allowedRetur
       provider,
       return_url: returnUrl,
       message: text(b.message, 280),
+      notify_updates: b.notifyUpdates === true,
     },
   };
 }

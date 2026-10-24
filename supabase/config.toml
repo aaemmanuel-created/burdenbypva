@@ -69,3 +69,21 @@ verify_jwt = false
 
 [functions.gift-aid-export]
 verify_jwt = false
+
+# Added 2026-10-25: church accounts and notifications. `church` checks the
+# signed-in user's Supabase token itself (and church membership), so the
+# gateway check is off like the others.
+[functions.church]
+verify_jwt = false
+
+[functions.burden-updates]
+verify_jwt = false
+
+[functions.notify-sweep]
+verify_jwt = false
+
+[functions.push-register]
+verify_jwt = false
+
+[functions.unsubscribe]
+verify_jwt = false

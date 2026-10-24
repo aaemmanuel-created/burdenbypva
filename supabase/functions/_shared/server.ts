@@ -103,6 +103,7 @@ export async function insertGift(
     p_gift: { ...input, access_token_hash: await sha256Hex(token), test_mode: testMode },
   });
   if (error) throw error;
+  if (input.notify_updates) extra = { ...extra, notify_updates: true };
   if (Object.keys(extra).length) await db.from('gifts').update(extra).eq('id', id);
   if (input.message) {
     await db.from('support_messages').insert({
