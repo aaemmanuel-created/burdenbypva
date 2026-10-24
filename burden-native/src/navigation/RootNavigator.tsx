@@ -23,6 +23,7 @@ import PosterScreen from '../screens/PosterScreen';
 import { createAppleTabNavigator } from './AppleTabs';
 import { DockToneProvider } from '../lib/dockSurface';
 import { isGiven } from '../lib/giftTimeline';
+import { useT } from '../lib/i18n';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createAppleTabNavigator();
@@ -38,6 +39,7 @@ const TABS: { name: keyof TabParamList; component: React.ComponentType<any>; ico
 ];
 
 function Tabs() {
+  const t = useT();
   const { gifts } = useGifts();
   const given = gifts.filter(isGiven).length;
   return (
@@ -45,11 +47,11 @@ function Tabs() {
     <Tab.Navigator tintColor={colors.ink} minimizeOnScroll
       // the old dock's names: HOME · DISCOVER · GIVING · ABOUT, regular, bold when selected
       labelFont={{ regular: font.regular, bold: font.bold, size: 10.5 }}>
-      {TABS.map((t) => (
-        <Tab.Screen key={t.name} name={t.name} component={t.component}
-          options={{ title: t.name.toUpperCase(), sfSymbol: t.icon, sfSymbolSelected: t.on, headerTitle: 'BURDEN',
+      {TABS.map((tab) => (
+        <Tab.Screen key={tab.name} name={tab.name} component={tab.component}
+          options={{ title: t(`nav.${tab.name.toLowerCase()}`).toUpperCase(), sfSymbol: tab.icon, sfSymbolSelected: tab.on, headerTitle: 'BURDEN',
             // the Giving tab counts the gifts you have given, as the old dock's badge did
-            badge: t.name === 'Giving' && given > 0 ? String(given) : undefined }} />
+            badge: tab.name === 'Giving' && given > 0 ? String(given) : undefined }} />
       ))}
     </Tab.Navigator>
     </DockToneProvider>

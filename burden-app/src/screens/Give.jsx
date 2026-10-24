@@ -11,10 +11,12 @@ import {
 import { demoEvents, demoHoldUntil } from '../lib/giftTimeline.js'
 import { MESSAGE_MAX, findFundraiser } from '../lib/community.js'
 import { ShareSheet } from '../components/Community.jsx'
+import { useT } from '../lib/i18n.jsx'
 
 const PRESETS = [5, 25, 100, 500]
 
 export default function Give({ id, navigate, recordGift, profile, fundraisers = [], fundraiserId }) {
+  const t = useT()
   const campaign = campaigns.find(c => c.id === id)
   const church = campaign && churches.find(ch => ch.id === campaign.churchId)
   const fundraiser = findFundraiser(fundraiserId, fundraisers)
@@ -244,14 +246,14 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
         }}
       >← {campaign.title}</button>
 
-      <Label>Give</Label>
+      <Label>{t('give.label')}</Label>
       <h1 style={{
         fontFamily: font.serif,
         fontSize: type['2xl'].fontSize, fontWeight: 600,
         marginTop: 16, marginBottom: 8, lineHeight: type['2xl'].lineHeight,
         letterSpacing: '-1.5%',
       }}>
-        Support {church.name}
+        {t('give.support', { church: church.name })}
       </h1>
       <div style={{ fontSize: type.xs.fontSize, color: colors.inkMuted, letterSpacing: '6%', marginBottom: 32 }}>
         {church.location} · {campaign.title}
@@ -266,7 +268,7 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
       <form onSubmit={handleSubmit} style={{ marginTop: 48 }}>
         {/* Amount */}
         <div style={{ marginBottom: 36 }}>
-          <Label style={{ marginBottom: 14 }}>Amount (USD)</Label>
+          <Label style={{ marginBottom: 14 }}>{t('give.amount')}</Label>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
@@ -294,7 +296,7 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
             type="number"
             min="1"
             step="1"
-            placeholder="Custom amount (min $1)"
+            placeholder={t('give.custom')}
             value={custom}
             onChange={e => setCustom(e.target.value)}
             style={{
@@ -327,20 +329,20 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
                 : 'Your account credit is held in BURDEN escrow. Switch off to pay by card instead.'} />
           )}
           <Toggle checked={recurring} onChange={setRecurring}
-            label="Make this a monthly gift"
+            label={t('give.monthly')}
             help={monthlyHelp(provider, usingMomo)} />
           <Toggle checked={anonymous} onChange={setAnonymous}
-            label="Give anonymously"
+            label={t('give.anonymous')}
             help="Your name will not be visible to the church or other donors. We still hold a tax-receipt record." />
           <Toggle checked={coverFee} onChange={setCoverFee}
-            label={`Cover platform &amp; processing fee (${formatMoney(fee)})`}
+            label={t('give.coverFee', { fee: formatMoney(fee) })}
             help="When covered, 100% of your gift reaches the church." />
         </div>
 
         {/* Payment method */}
         {!creditCovers && (
           <fieldset style={{ border: 'none', padding: 0, margin: '0 0 36px' }}>
-            <legend style={{ padding: 0, marginBottom: 14 }}><Label>Pay with</Label></legend>
+            <legend style={{ padding: 0, marginBottom: 14 }}><Label>{t('give.payWith')}</Label></legend>
             {PAYMENT_METHODS.map(m => (
               <label key={m.id} style={{
                 display: 'flex', gap: 14, alignItems: 'flex-start', padding: '14px 0',
@@ -360,7 +362,7 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
             {provider === 'paystack' && (
               <div style={{ margin: '16px 0 0 32px' }}>
                 <Toggle checked={momoDirect} onChange={setMomoDirect}
-                  label="Approve on my phone (mobile money)"
+                  label={t('give.phone')}
                   help="We send a prompt to your phone. You approve it with your PIN on the phone — you never type your PIN here." />
                 {momoDirect && (
                   <div style={{ paddingTop: 14 }}>
@@ -391,10 +393,10 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
 
         {/* Donor info — email is needed even for anonymous gifts (receipt). */}
         <div style={{ marginBottom: 36 }}>
-          <Label style={{ marginBottom: 14 }}>Your details</Label>
+          <Label style={{ marginBottom: 14 }}>{t('give.details')}</Label>
           <input
             type="text"
-            placeholder="Full name"
+            placeholder={t('give.name')}
             value={name}
             onChange={e => setName(e.target.value)}
             required
@@ -402,7 +404,7 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
           />
           <input
             type="email"
-            placeholder="Email for receipt"
+            placeholder={t('give.email')}
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -413,10 +415,10 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
             {anonymous && ' Because you give anonymously, the church and other givers will not see it.'}
           </p>
           <Toggle checked={notifyUpdates} onChange={setNotifyUpdates}
-            label="Email me when the church posts an update"
+            label={t('give.notify')}
             help="A short note when there is news about this burden. Every email has a one-click unsubscribe. You will hear about your own gift (paid to the church, confirmed) either way." />
           <Toggle checked={giftAid} onChange={setGiftAid}
-            label="Add Gift Aid (UK taxpayers only)"
+            label={t('give.giftAid')}
             help={GIFT_AID_HELP} />
           {giftAid && (
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8, marginTop: 12 }}>
@@ -428,7 +430,7 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
 
         {/* Words of support — optional, shown without the amount */}
         <div style={{ marginBottom: 36 }}>
-          <Label style={{ marginBottom: 14 }}>Words of support (optional)</Label>
+          <Label style={{ marginBottom: 14 }}>{t('give.words')}</Label>
           <textarea
             value={message}
             onChange={e => setMessage(e.target.value.slice(0, MESSAGE_MAX))}
@@ -445,11 +447,11 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
         {/* Summary */}
         <div style={{ padding: '24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <div>
-            <Label>Total today</Label>
+            <Label>{t('give.total')}</Label>
             <div style={{ marginTop: 6, fontSize: 11, color: colors.inkMuted }}>
               {creditCovers
                 ? 'paid from account credit'
-                : (recurring ? 'and monthly thereafter' : 'one-time gift')}
+                : (recurring ? t('give.monthlyAfter') : t('give.oneTime'))}
             </div>
           </div>
           <div style={{ fontSize: 28, fontWeight: 500 }}>{formatMoney(creditCovers ? value : total)}</div>
@@ -464,8 +466,8 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
           || (usingMomo && !creditCovers && !momoPhone)}>
           {busy ? (usingMomo ? 'Sending the prompt…' : 'Opening secure checkout…')
             : creditCovers ? `Give ${formatMoney(value)} from credit`
-            : usingMomo ? `Send prompt for ${formatMoney(total)}`
-            : `Give ${formatMoney(total)}`}
+            : usingMomo ? t('give.sendPrompt', { total: formatMoney(total) })
+            : t('give.button', { total: formatMoney(total) })}
         </Button>
 
         <p style={{ marginTop: 18, fontSize: 10, color: colors.inkMuted, lineHeight: 1.6, letterSpacing: 0.3 }}>
@@ -488,6 +490,7 @@ function monthlyHelp(provider, usingMomo) {
 
 // "Check your phone" — shown while the mobile money prompt is out.
 function MomoWaiting({ waiting, phone, network, otp, setOtp, onOtp, error, onDone, onCancel }) {
+  const t = useT()
   const { gift, state, message, demo } = waiting
   useEffect(() => {
     if (state !== 'approve') return
@@ -512,7 +515,7 @@ function MomoWaiting({ waiting, phone, network, otp, setOtp, onOtp, error, onDon
     <main style={{ maxWidth: 560, margin: '0 auto', padding: '96px 28px' }}>
       <Label>{network?.label}</Label>
       <h1 style={{ fontSize: type['2xl'].fontSize, fontWeight: 600, lineHeight: type['2xl'].lineHeight, margin: '16px 0 24px' }}>
-        {state === 'otp' ? 'Enter the code from your network' : 'Check your phone'}
+        {state === 'otp' ? 'Enter the code from your network' : t('give.checkPhone')}
       </h1>
       {state === 'otp' ? (
         <>

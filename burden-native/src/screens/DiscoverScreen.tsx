@@ -18,6 +18,7 @@ import { Badge, FundingSquare, Label, Progress, Tile } from '../components/UI';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
 import { DOCK_SPACE } from '../components/Dock';
 import { DockSurfaceCtx, useDockSurface } from '../lib/dockSurface';
+import { useT } from '../lib/i18n';
 
 const CATEGORIES: ('All' | Campaign['category'])[] = ['All', 'Education', 'Health', 'Community', 'Building'];
 
@@ -27,6 +28,7 @@ type Nav = CompositeNavigationProp<
 >;
 
 export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
+  const t = useT();
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('All');
   const surface = useDockSurface();
   const [query, setQuery] = useState('');
@@ -56,16 +58,16 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
       contentContainerStyle={{ paddingBottom: DOCK_SPACE + 32 }}
       ListEmptyComponent={
         <View style={{ paddingHorizontal: 20, paddingVertical: 32, alignItems: 'flex-start', gap: 12 }}>
-          <Text style={styles.empty}>No burdens match your search.</Text>
+          <Text style={styles.empty}>{t('discover.none')}</Text>
           <Pressable onPress={() => { setQuery(''); setCat('All'); }} accessibilityRole="button" hitSlop={8}>
-            <Text style={[styles.empty, { textDecorationLine: 'underline', color: colors.ink }]}>Clear search</Text>
+            <Text style={[styles.empty, { textDecorationLine: 'underline', color: colors.ink }]}>{t('discover.clear')}</Text>
           </Pressable>
         </View>
       }
       ListHeaderComponent={
         <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          <Label>Discover</Label>
-          <Text style={styles.h1}>Verified burdens.</Text>
+          <Label>{t('discover.label')}</Label>
+          <Text style={styles.h1}>{t('discover.title')}</Text>
 
           <ScrollView
             horizontal
@@ -84,7 +86,7 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
                   style={[styles.chip, active && styles.chipActive]}
                 >
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {c.toUpperCase()}
+                    {t(`cat.${c}`).toUpperCase()}
                   </Text>
                 </Pressable>
               );
@@ -94,7 +96,7 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search churches and campaigns…"
+            placeholder={t('discover.search')}
             placeholderTextColor={colors.inkMuted}
             style={styles.search}
           />

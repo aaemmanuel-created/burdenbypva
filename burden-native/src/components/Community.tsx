@@ -9,6 +9,7 @@ import type { Campaign, Church } from '../data/mock';
 import { Button, Label, Progress, Tile } from './UI';
 import { colors, font, formatMoney, tile } from '../constants/theme';
 import { formatDay, shareText, shareUrl, type Fundraiser, type SupportWord, type Update } from '../lib/community';
+import { useT } from '../lib/i18n';
 
 function SectionHead({ label, count }: { label: string; count: number }) {
   return (
@@ -29,11 +30,12 @@ function More({ children, onPress }: { children: string; onPress: () => void }) 
 
 // Dated posts from the burden's team — newest open, older ones folded.
 export function UpdatesSection({ updates }: { updates: Update[] }) {
+  const t = useT();
   const [all, setAll] = useState(false);
   const shown = all ? updates : updates.slice(0, 1);
   return (
     <View>
-      <SectionHead label="Updates" count={updates.length} />
+      <SectionHead label={t('campaign.updates')} count={updates.length} />
       {updates.length === 0 && (
         <Text style={styles.body}>The team posts a public update every month. The first is on its way.</Text>
       )}
@@ -55,11 +57,12 @@ export function UpdatesSection({ updates }: { updates: Update[] }) {
 
 // Messages givers leave with their gifts. Never the amount.
 export function SupportSection({ words, onGive }: { words: SupportWord[]; onGive: () => void }) {
+  const t = useT();
   const [all, setAll] = useState(false);
   const shown = all ? words : words.slice(0, 3);
   return (
     <View>
-      <SectionHead label="Words of support" count={words.length} />
+      <SectionHead label={t('campaign.support')} count={words.length} />
       <Text style={styles.note}>Givers can leave a few words or a prayer with their gift. Every message is checked before it appears, and amounts are never shown.</Text>
       {shown.map((w, i) => (
         <View key={w.date + i} style={styles.item}>
@@ -87,9 +90,10 @@ export function FundraisersSection({
   fundraisers: Fundraiser[]; highlightId?: string;
   onGiveThrough: (f: Fundraiser) => void; onStart: () => void;
 }) {
+  const t = useT();
   return (
     <View>
-      <SectionHead label="Carrying it with others" count={fundraisers.length} />
+      <SectionHead label={t('campaign.carrying')} count={fundraisers.length} />
       <Text style={styles.note}>
         Anyone can raise for this burden among their own friends. Every gift still goes straight to the
         church's verified account.
@@ -115,7 +119,7 @@ export function FundraisersSection({
         ))}
       </View>
       <Button variant="ghost" style={{ marginTop: 20, alignSelf: 'flex-start' }} onPress={onStart}>
-        Fundraise for this burden
+        {t('campaign.fundraise')}
       </Button>
     </View>
   );
@@ -125,17 +129,18 @@ export function FundraisersSection({
 export function ShareOptions({
   campaign, church, fundraiser, onPoster,
 }: { campaign: Campaign; church: Church; fundraiser?: Fundraiser | null; onPoster?: () => void }) {
+  const t = useT();
   const url = shareUrl(campaign.id, fundraiser?.id);
   const text = shareText(campaign, church, fundraiser);
   const rows: { label: string; onPress: () => void }[] = [
-    { label: 'Share or copy link', onPress: () => { Share.share({ message: `${text} ${url}`, url, title: campaign.title }).catch(() => {}); } },
+    { label: t('share.shareOrCopy'), onPress: () => { Share.share({ message: `${text} ${url}`, url, title: campaign.title }).catch(() => {}); } },
     { label: 'WhatsApp', onPress: () => { Linking.openURL('whatsapp://send?text=' + encodeURIComponent(`${text} ${url}`)).catch(() => Linking.openURL('https://wa.me/?text=' + encodeURIComponent(`${text} ${url}`))); } },
-    { label: 'Email', onPress: () => { Linking.openURL('mailto:?subject=' + encodeURIComponent(campaign.title) + '&body=' + encodeURIComponent(`${text}\n\n${url}`)).catch(() => {}); } },
-    ...(onPoster ? [{ label: 'QR code for church', onPress: onPoster }] : []),
+    { label: t('share.email'), onPress: () => { Linking.openURL('mailto:?subject=' + encodeURIComponent(campaign.title) + '&body=' + encodeURIComponent(`${text}\n\n${url}`)).catch(() => {}); } },
+    ...(onPoster ? [{ label: t('share.poster'), onPress: onPoster }] : []),
   ];
   return (
     <View>
-      <Label>Your link</Label>
+      <Label>{t('share.link')}</Label>
       <View style={styles.linkBox}>
         <Text selectable numberOfLines={1} style={styles.linkText}>{url}</Text>
       </View>
@@ -158,13 +163,14 @@ export function ShareSheet({
   open: boolean; onClose: () => void; campaign: Campaign; church: Church;
   fundraiser?: Fundraiser | null; onFundraise?: () => void; onPoster?: () => void;
 }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
       <View style={[styles.sheet, { paddingBottom: 24 + insets.bottom }]} accessibilityViewIsModal>
         <View style={styles.sheetHead}>
-          <Text style={styles.sheetTitle}>Share this burden</Text>
+          <Text style={styles.sheetTitle}>{t('share.title')}</Text>
           <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Text style={styles.close}>×</Text>
           </Pressable>
@@ -175,11 +181,11 @@ export function ShareSheet({
         />
         {onFundraise && (
           <View style={{ marginTop: 24 }}>
-            <Label>Carry it further</Label>
+            <Label>{t('share.further')}</Label>
             <Text style={[styles.body, { fontSize: 13 }]}>
               Start your own page for this burden and invite your friends, church or colleagues to give through it.
             </Text>
-            <Button style={{ marginTop: 16 }} onPress={() => { onClose(); onFundraise(); }}>Fundraise for this burden</Button>
+            <Button style={{ marginTop: 16 }} onPress={() => { onClose(); onFundraise(); }}>{t('campaign.fundraise')}</Button>
           </View>
         )}
       </View>

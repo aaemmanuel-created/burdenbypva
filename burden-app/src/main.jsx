@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import App from './App.jsx'
+import { I18nProvider } from './lib/i18n.jsx'
 
 const dsn = import.meta.env.VITE_SENTRY_DSN
 
@@ -32,7 +33,9 @@ const Fallback = () => (
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<Fallback />}>
-      <App />
+      <I18nProvider>
+        <App />
+      </I18nProvider>
     </Sentry.ErrorBoundary>
   </StrictMode>,
 )

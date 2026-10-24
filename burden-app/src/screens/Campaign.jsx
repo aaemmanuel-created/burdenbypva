@@ -6,6 +6,7 @@ import { findFundraiser, fundraisersFor, supportFor, updatesFor } from '../lib/c
 import { campaigns, churches } from '../data/mock.js'
 import { fetchSupportWords, liveCheckout } from '../lib/payments.js'
 import { fetchBurdenUpdates } from '../lib/church.js'
+import { useT } from '../lib/i18n.jsx'
 
 // Burden detail. The user-facing word is "burden" — the data model still
 // calls these "campaigns" internally. Every burden surfaces five things
@@ -19,6 +20,7 @@ import { fetchBurdenUpdates } from '../lib/church.js'
 // of support from givers, Fundraisers carrying it with others, and Share.
 
 export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts = [], fundraisers = [], fundraiserId, churchUpdates = [] }) {
+  const t = useT()
   const [sharing, setSharing] = useState(false)
   // Live: only words the review queue approved, and the updates the church
   // posted from its dashboard (null until loaded / in demo).
@@ -71,14 +73,14 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
           fontSize: 12, letterSpacing: 2, textTransform: 'uppercase',
           color: colors.inkSoft, marginBottom: 32,
         }}
-      >← Discover</button>
+      >← {t('nav.discover')}</button>
 
       <div className="split-2">
         {/* Left — content */}
         <div>
           {/* Category and trust side by side at the top, as in the app */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Badge>{burden.category}</Badge>
+            <Badge>{t(`cat.${burden.category}`)}</Badge>
             {church.verified && <Badge tone="trust">{church.tier}</Badge>}
           </div>
           <h1 style={{
@@ -101,7 +103,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* About — four lines at most; the detail follows below */}
           <section style={{ padding: '32px 0' }}>
-            <Label>About this burden</Label>
+            <Label>{t('campaign.about')}</Label>
             <p style={{
               marginTop: 14, fontSize: 14, lineHeight: 1.75, color: colors.inkSoft,
               display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -121,7 +123,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* Profiles — the people carrying this burden */}
           <section style={{ padding: '32px 0' }}>
-            <Label>Profiles</Label>
+            <Label>{t('campaign.profiles')}</Label>
             {/* Scrolls sideways: focusable so keyboard users can scroll it (WCAG 2.1.1). */}
             <div tabIndex={0} role="region" aria-label="Profiles of the people carrying this burden"
               style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingTop: 16, paddingBottom: 4 }}>
@@ -133,7 +135,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* Objective */}
           <section style={{ padding: '32px 0' }}>
-            <Label>Objective</Label>
+            <Label>{t('campaign.objective')}</Label>
             <p style={{ marginTop: 14, fontSize: 14, lineHeight: 1.75, color: colors.ink }}>
               {burden.objective}
             </p>
@@ -143,7 +145,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* Current state */}
           <section style={{ padding: '32px 0' }}>
-            <Label>Current state</Label>
+            <Label>{t('campaign.state')}</Label>
             <p style={{ marginTop: 14, fontSize: 14, lineHeight: 1.75, color: colors.inkSoft }}>
               {burden.currentState}
             </p>
@@ -153,7 +155,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* Money workflow */}
           <section style={{ padding: '32px 0' }}>
-            <Label>How the money moves</Label>
+            <Label>{t('campaign.money')}</Label>
             <ol style={{
               marginTop: 18,
               listStyle: 'none',
@@ -208,7 +210,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* Where every dollar goes */}
           <section style={{ padding: '32px 0' }}>
-            <Label>Where every dollar goes</Label>
+            <Label>{t('campaign.dollar')}</Label>
             <div style={{ marginTop: 18 }}>
               {items.map(it => (
                 <div key={it.label} style={{
@@ -241,7 +243,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* About the church */}
           <section style={{ padding: '32px 0' }}>
-            <Label>About {church.name}</Label>
+            <Label>{t('campaign.aboutChurch', { church: church.name })}</Label>
             <p style={{ marginTop: 14, fontSize: 14, lineHeight: 1.75, color: colors.inkSoft }}>
               {church.summary} Founded {church.founded}. {church.tradition}. Led by {church.leadership}.
             </p>
@@ -252,7 +254,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
         <aside>
           <Tile flat as="div" padding={24} style={{ gap: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Label onNavy>Funding</Label>
+              <Label onNavy>{t('campaign.funding')}</Label>
               <FundingSquare raised={burden.raised} goal={burden.goal} size={18} />
             </div>
 
@@ -268,29 +270,28 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
                   {formatMoney(burden.raised)}
                 </div>
                 <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
-                  of {formatMoney(burden.goal)} ({pct}%)
+                  {t('campaign.of', { goal: formatMoney(burden.goal), pct })}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 16, fontWeight: 500, color: tile.ink }}>{burden.donors}</div>
                 <div style={{ fontSize: 12, color: tile.muted, letterSpacing: 1, marginTop: 4 }}>
-                  donors
+                  {t('campaign.donors')}
                 </div>
               </div>
             </div>
 
             <Button variant="onNavy" full onClick={() => navigate({ name: 'give', id: burden.id, fundraiserId: sharedFundraiser?.id })}>
-              {sharedFundraiser ? `Give through ${sharedFundraiser.own ? 'your page' : sharedFundraiser.name.split(' ')[0]}` : 'Carry this burden — give'}
+              {sharedFundraiser ? `Give through ${sharedFundraiser.own ? 'your page' : sharedFundraiser.name.split(' ')[0]}` : t('campaign.give')}
             </Button>
             <button onClick={() => setSharing(true)} style={{
               width: '100%', padding: '14px 24px', borderRadius: 10, cursor: 'pointer',
               background: 'transparent', border: '1px solid rgba(255,255,255,0.55)', color: tile.ink,
               fontSize: type.xs.fontSize, letterSpacing: '6%', textTransform: 'uppercase', fontWeight: 600,
-            }}>Share</button>
+            }}>{t('campaign.share')}</button>
 
             <p style={{ marginTop: 4, fontSize: 12, color: tile.muted, lineHeight: 1.6, letterSpacing: 0.3 }}>
-              Minimum gift: $1 USD or local equivalent. Receipt issued automatically.
-              Anonymous and recurring options available at checkout.
+              {t('campaign.minimum')}
             </p>
           </Tile>
         </aside>
@@ -337,11 +338,12 @@ function ProfileTile({ member }) {
 }
 
 function PrayerGroup({ burden, joined, onToggle }) {
+  const t = useT()
   const memberCount = burden.prayerGroup.members + (joined ? 1 : 0)
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <Label>Prayer group</Label>
+        <Label>{t('campaign.prayer')}</Label>
         <span style={{ fontSize: 12, letterSpacing: 1, color: colors.inkMuted }}>
           {memberCount.toLocaleString()} praying · {burden.prayerGroup.recentPrayers} prayers this week
         </span>
@@ -359,7 +361,7 @@ function PrayerGroup({ burden, joined, onToggle }) {
 
       <div style={{ marginTop: 20 }}>
         <Button onClick={onToggle} variant={joined ? 'ghost' : 'primary'}>
-          {joined ? 'You are in this prayer group ✓' : 'Join the prayer group'}
+          {joined ? t('campaign.inPrayer') : t('campaign.joinPrayer')}
         </Button>
       </div>
     </div>

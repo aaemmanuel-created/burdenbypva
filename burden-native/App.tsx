@@ -15,6 +15,7 @@ import * as Sentry from '@sentry/react-native';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { GiftsProvider } from './src/context/GiftsContext';
 import type { RootStackParamList } from './src/navigation/types';
+import { I18nProvider } from './src/lib/i18n';
 
 // Init Sentry before any rendering so module-load errors are captured.
 // DSN comes from EXPO_PUBLIC_SENTRY_DSN at build time. Source-map / dSYM
@@ -99,12 +100,14 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <I18nProvider>
         <GiftsProvider>
           <NavigationContainer ref={navigationRef} linking={linking}>
             <RootNavigator />
             <StatusBar style="dark" />
           </NavigationContainer>
         </GiftsProvider>
+        </I18nProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

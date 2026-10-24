@@ -1,5 +1,6 @@
 import { colors, font, type } from '../theme.js'
 import { buildTimeline } from '../lib/giftTimeline.js'
+import { useT } from '../lib/i18n.jsx'
 
 // Vertical step-by-step tracker for one gift. Done steps are evergreen,
 // the step in progress is ochre, a declined payment is red, and steps
@@ -32,6 +33,7 @@ function Dot({ state }) {
 }
 
 export default function Timeline({ gift }) {
+  const t = useT()
   const steps = buildTimeline(gift)
   return (
     <ol aria-label="Gift progress" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -58,7 +60,7 @@ export default function Timeline({ gift }) {
                   fontFamily: font.sans, fontSize: type.base.fontSize, fontWeight: 500,
                   color: s.state === 'failed' ? colors.fundLow : muted ? colors.inkSoft : colors.ink,
                 }}>
-                  {s.label}
+                  {t(s.label === 'Payment declined' ? 'tl.declined' : s.label === 'Checkout not completed' ? 'tl.notCompleted' : `tl.${s.key}`)}
                   <span style={visuallyHidden}>{` — ${stateWord[s.state]}`}</span>
                 </span>
                 {s.time && (

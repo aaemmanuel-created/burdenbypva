@@ -15,12 +15,14 @@ import type { Gift } from '../data/mock';
 import { demoEvents, demoHoldUntil } from '../lib/giftTimeline';
 import { MESSAGE_MAX, findFundraiser } from '../lib/community';
 import { haptic } from '../lib/useHaptic';
+import { useT } from '../lib/i18n';
 
 const PRESETS = [5, 25, 100, 500];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Give'>;
 
 export default function GiveScreen({ route, navigation }: Props) {
+  const t = useT();
   const campaign = campaigns.find((c) => c.id === route.params.campaignId);
   const church = campaign && churches.find((ch) => ch.id === campaign.churchId);
   const { recordGift, creditBalance: credit, fundraisers } = useGifts();
@@ -199,8 +201,8 @@ export default function GiveScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
-      <Label>Give</Label>
-      <Text style={styles.h1}>Support {church.name}</Text>
+      <Label>{t('give.label')}</Label>
+      <Text style={styles.h1}>{t('give.support', { church: church.name })}</Text>
       <Text style={styles.sub}>{church.location.toUpperCase()}</Text>
       <Text style={[styles.sub, { marginTop: 4 }]}>{campaign.title.toUpperCase()}</Text>
       {fundraiser && (
@@ -212,7 +214,7 @@ export default function GiveScreen({ route, navigation }: Props) {
 
       <Rule soft style={{ marginVertical: 24 }} />
 
-      <Label style={{ marginBottom: 12 }}>Amount (USD)</Label>
+      <Label style={{ marginBottom: 12 }}>{t('give.amount')}</Label>
       <View style={styles.presetRow}>
         {PRESETS.map((p) => {
           const active = custom === '' && amount === p;
@@ -232,7 +234,7 @@ export default function GiveScreen({ route, navigation }: Props) {
       </View>
       <TextInput
         keyboardType="numeric"
-        placeholder="Custom amount (min $1)"
+        placeholder={t('give.custom')}
         placeholderTextColor={colors.inkMuted}
         value={custom}
         onChangeText={setCustom}
@@ -257,19 +259,19 @@ export default function GiveScreen({ route, navigation }: Props) {
         <Toggle
           checked={recurring}
           onChange={setRecurring}
-          label="Make this a monthly gift"
+          label={t('give.monthly')}
           help={monthlyHelp(provider, usingMomo)}
         />
         <Toggle
           checked={anonymous}
           onChange={setAnonymous}
-          label="Give anonymously"
+          label={t('give.anonymous')}
           help="Your name will not be visible to the church or other donors. We still hold a tax-receipt record."
         />
         <Toggle
           checked={coverFee}
           onChange={setCoverFee}
-          label={`Cover platform & processing fee (${formatMoney(fee)})`}
+          label={t('give.coverFee', { fee: formatMoney(fee) })}
           help="When covered, 100% of your gift reaches the church."
         />
       </View>
@@ -277,7 +279,7 @@ export default function GiveScreen({ route, navigation }: Props) {
       {/* paying from credit needs no provider — the web hides this too */}
       {!creditCovers && (
       <View style={{ marginTop: 24 }}>
-        <Label style={{ marginBottom: 4 }}>Pay with</Label>
+        <Label style={{ marginBottom: 4 }}>{t('give.payWith')}</Label>
         {PAYMENT_METHODS.map((m) => {
           const selected = provider === m.id;
           return (
@@ -303,7 +305,7 @@ export default function GiveScreen({ route, navigation }: Props) {
             <Toggle
               checked={momoDirect}
               onChange={setMomoDirect}
-              label="Approve on my phone (mobile money)"
+              label={t('give.phone')}
               help="We send a prompt to your phone. You approve it with your PIN on the phone — you never type your PIN here."
             />
             {momoDirect && (
@@ -343,16 +345,16 @@ export default function GiveScreen({ route, navigation }: Props) {
       )}
 
       <View style={{ marginTop: 24 }}>
-        <Label style={{ marginBottom: 12 }}>Your details</Label>
+        <Label style={{ marginBottom: 12 }}>{t('give.details')}</Label>
         <TextInput
-          placeholder="Full name"
+          placeholder={t('give.name')}
           placeholderTextColor={colors.inkMuted}
           value={name}
           onChangeText={setName}
           style={[styles.input, { marginBottom: 8 }]}
         />
         <TextInput
-          placeholder="Email for receipt"
+          placeholder={t('give.email')}
           placeholderTextColor={colors.inkMuted}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -367,10 +369,10 @@ export default function GiveScreen({ route, navigation }: Props) {
         <Toggle
           checked={notifyUpdates}
           onChange={setNotifyUpdates}
-          label="Email me when the church posts an update"
+          label={t('give.notify')}
           help="A short note when there is news about this burden. Every email has a one-click unsubscribe. You will hear about your own gift (paid to the church, confirmed) either way."
         />
-        <Toggle checked={giftAid} onChange={setGiftAid} label="Add Gift Aid (UK taxpayers only)" help={GIFT_AID_HELP} />
+        <Toggle checked={giftAid} onChange={setGiftAid} label={t('give.giftAid')} help={GIFT_AID_HELP} />
         {giftAid && (
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
             <TextInput placeholder="House name or number" placeholderTextColor={colors.inkMuted} value={house}
@@ -383,7 +385,7 @@ export default function GiveScreen({ route, navigation }: Props) {
 
       {/* Words of support — optional, shown without the amount */}
       <View style={{ marginTop: 24 }}>
-        <Label style={{ marginBottom: 12 }}>Words of support (optional)</Label>
+        <Label style={{ marginBottom: 12 }}>{t('give.words')}</Label>
         <TextInput
           multiline
           maxLength={MESSAGE_MAX}
@@ -405,8 +407,8 @@ export default function GiveScreen({ route, navigation }: Props) {
 
       <View style={styles.totalRow}>
         <View>
-          <Label>Total today</Label>
-          <Text style={styles.totalSub}>{creditCovers ? 'paid from account credit' : recurring ? 'and monthly thereafter' : 'one-time gift'}</Text>
+          <Label>{t('give.total')}</Label>
+          <Text style={styles.totalSub}>{creditCovers ? 'paid from account credit' : recurring ? t('give.monthlyAfter') : t('give.oneTime')}</Text>
         </View>
         <Text style={styles.totalAmount}>{formatMoney(creditCovers ? value : total)}</Text>
       </View>
@@ -416,8 +418,8 @@ export default function GiveScreen({ route, navigation }: Props) {
       <Button onPress={submit} disabled={!canSubmit}>
         {busy ? (usingMomo ? 'Sending the prompt…' : 'Opening secure checkout…')
           : creditCovers ? `Give ${formatMoney(value)} from credit`
-          : usingMomo ? `Send prompt for ${formatMoney(total)}`
-          : `Give ${formatMoney(total)}`}
+          : usingMomo ? t('give.sendPrompt', { total: formatMoney(total) })
+          : t('give.button', { total: formatMoney(total) })}
       </Button>
 
       <Text style={styles.disclaimer}>
@@ -451,6 +453,7 @@ function MomoWaiting({
   otp: string; setOtp: (v: string) => void; error: string;
   onOtp: () => void; onDone: (gift: Gift) => void; onCancel: () => void;
 }) {
+  const t = useT();
   const { gift, state, message, demo } = waiting;
   useEffect(() => {
     if (state !== 'approve') return;
@@ -475,7 +478,7 @@ function MomoWaiting({
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: 20, paddingTop: 48, paddingBottom: 96 }}>
       <Label>{network.label}</Label>
-      <Text style={styles.h1}>{state === 'otp' ? 'Enter the code from your network' : 'Check your phone'}</Text>
+      <Text style={styles.h1}>{state === 'otp' ? 'Enter the code from your network' : t('give.checkPhone')}</Text>
       {state === 'otp' ? (
         <>
           <Text style={[styles.toggleHelp, { fontSize: 13, lineHeight: 21 }]}>{message}</Text>
