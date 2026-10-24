@@ -14,9 +14,14 @@ import GiftDetail from './screens/GiftDetail.jsx'
 import Fundraise from './screens/Fundraise.jsx'
 import Poster from './screens/Poster.jsx'
 import Church from './screens/Church.jsx'
+import Admin from './screens/Admin.jsx'
+import ChurchApply from './screens/ChurchApply.jsx'
 import { takeCheckoutReturn } from './lib/payments.js'
 import { isGiven, settleDemoGift } from './lib/giftTimeline.js'
 import { takeShareLink } from './lib/community.js'
+import { authLive, callFunction, currentSession, signOut as endSession } from './lib/auth.js'
+import { deleteAccount, saveDemoAccount, syncAccount } from './lib/account.js'
+import { applyBurdenContent, loadBurdenContent, useDemoTrust } from './lib/trust.js'
 
 // Joined prayer groups, recorded gifts, the splash gate, account credit,
 // and donor name all live in App state. Gifts are also kept in this
@@ -93,6 +98,9 @@ export default function App() {
   const addFundraiser = useCallback((f) => {
     setFundraisers(prev => [f, ...prev])
   }, [])
+  const closeOwnFundraiser = useCallback((id) => {
+    setFundraisers(prev => prev.map(f => (f.id === id ? { ...f, closed: true } : f)))
+  }, [])
   const [churchUpdates, setChurchUpdates] = useState(() => loadJson(CHURCH_UPDATES_KEY, []))
   const [demoPayouts, setDemoPayouts] = useState(() => loadJson(CHURCH_PAYOUTS_KEY, {}))
   useEffect(() => {
@@ -106,6 +114,49 @@ export default function App() {
   const [joinedPrayerGroups, setJoinedPrayerGroups] = useState(new Set())
   const [creditBalance, setCreditBalance] = useState(0)
   const [donorName, setDonorName] = useState('')
+
+  // ── The giver's account (lib/account.js) ──
+  // Signed in, gifts and fundraisers belong to the person, not this browser:
+  // what was made here is added to the account, and the account's come here.
+  const [account, setAccount] = useState(null) // { email }
+  const [accountError, setAccountError] = useState('')
+  const signIn = useCallback(async (session) => {
+    const email = session?.user?.email
+    if (!email) return
+    setAccountError('')
+    try {
+      const acc = await syncAccount(email, gifts, fundraisers)
+      setGifts(acc.gifts.map(g => settleDemoGift(g)))
+      setFundraisers(acc.fundraisers)
+      setAccount({ email })
+    } catch (e) {
+      setAccountError(e.message)
+    }
+  }, [gifts, fundraisers])
+  useEffect(() => { currentSession().then(s => s?.user?.email && signIn(s)) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Signing out leaves nothing of the account on this browser.
+  const signOutAccount = useCallback(async ({ remove = false } = {}) => {
+    if (remove) await deleteAccount(account?.email)
+    await endSession()
+    setAccount(null); setGifts([]); setFundraisers([])
+  }, [account])
+  // Demo: every change while signed in is saved to the account.
+  useEffect(() => { if (account) saveDemoAccount(account.email, gifts, fundraisers) }, [account, gifts, fundraisers])
+  // Live: a gift made while signed in is added to the account once it goes through.
+  useEffect(() => {
+    if (!authLive || !account) return
+    const fresh = gifts.filter(g => g.live && g.token && !g.account && isGiven(g))
+    if (!fresh.length) return
+    callFunction('account', 'POST', { action: 'claim', gifts: fresh.map(g => ({ id: g.id, token: g.token })) })
+      .then(() => setGifts(prev => prev.map(g => (fresh.some(f => f.id === g.id) ? { ...g, account: true } : g))))
+      .catch(() => { /* retried on the next change */ })
+  }, [account, gifts])
+
+  // Wording churches changed on their burdens, after BURDEN approved it.
+  const trust = useDemoTrust()
+  const [liveContent, setLiveContent] = useState(null)
+  useEffect(() => { if (authLive) loadBurdenContent().then(setLiveContent).catch(() => {}) }, [])
+  applyBurdenContent(authLive ? liveContent : trust.content)
 
   const navigate = useCallback((next) => {
     setRoute(next)
@@ -167,8 +218,13 @@ export default function App() {
         fundraisers={fundraisers}
         fundraiserId={route.fundraiserId}
         churchUpdates={churchUpdates}
+        account={account}
       />
     ); break
+    case 'admin':    screen = (
+      <Admin navigate={navigate} demoPayouts={demoPayouts} setDemoPayout={setDemoPayout} />
+    ); break
+    case 'apply':    screen = <ChurchApply navigate={navigate} />; break
     case 'church':   screen = (
       <Church
         navigate={navigate}
@@ -188,6 +244,7 @@ export default function App() {
         profile={profile}
         fundraisers={fundraisers}
         fundraiserId={route.fundraiserId}
+        account={account}
       />
     ); break
     case 'fundraise': screen = (
@@ -196,12 +253,14 @@ export default function App() {
         navigate={navigate}
         profile={profile}
         addFundraiser={addFundraiser}
+        account={account}
+        onSignIn={signIn}
       />
     ); break
     case 'poster':   screen = (
       <Poster id={route.id} navigate={navigate} fundraisers={fundraisers} fundraiserId={route.fundraiserId} />
     ); break
-    case 'history':  screen = <History gifts={gifts} navigate={navigate} />; break
+    case 'history':  screen = <History gifts={gifts} navigate={navigate} account={account} />; break
     case 'gift':     screen = (
       <GiftDetail
         gift={gifts.find(g => g.id === route.id)}
@@ -215,6 +274,12 @@ export default function App() {
         navigate={navigate}
         addCredit={addCredit}
         updateName={updateName}
+        account={account}
+        accountError={accountError}
+        onSignIn={signIn}
+        onSignOut={signOutAccount}
+        fundraisers={fundraisers}
+        closeFundraiser={closeOwnFundraiser}
       />
     ); break
     case 'about':    screen = <About />; break

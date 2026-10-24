@@ -7,7 +7,7 @@ const statusTone = {
   failed: colors.fundLow, cancelled: colors.inkMuted,
 }
 
-export default function History({ gifts, navigate }) {
+export default function History({ gifts, navigate, account }) {
   const given = gifts.filter(isGiven)
   const total = given.reduce((s, g) => s + g.amount, 0)
 
@@ -17,6 +17,16 @@ export default function History({ gifts, navigate }) {
       <h1 style={{ fontFamily: font.serif, fontSize: type['3xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%', marginTop: 14, marginBottom: 36 }}>
         Your gifts on BURDEN.
       </h1>
+      {account ? (
+        <p style={{ margin: '-20px 0 28px', fontSize: 13, color: colors.inkSoft }}>Kept with your account, {account.email}, on every device.</p>
+      ) : gifts.length > 0 && (
+        <p style={{ margin: '-20px 0 28px', fontSize: 13, color: colors.inkSoft, lineHeight: 1.7 }}>
+          These are kept in this browser only.{' '}
+          <button onClick={() => navigate({ name: 'profile' })} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: colors.ink, textDecoration: 'underline', cursor: 'pointer' }}>
+            Sign in
+          </button>{' '}to keep them on every device.
+        </p>
+      )}
 
       {gifts.length === 0 ? (
         <Tile flat as="div" padding={48} style={{ alignItems: 'center', textAlign: 'center', gap: 18 }}>

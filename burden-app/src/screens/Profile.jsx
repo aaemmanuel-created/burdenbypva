@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { colors, tile, font, type } from '../theme.js'
 import { Label, Rule, Tile, Badge, Progress, FundingSquare, formatMoney } from '../components/UI.jsx'
 import { campaigns, churches } from '../data/mock.js'
+import SignIn from '../components/SignIn.jsx'
+import { closeFundraiser } from '../lib/account.js'
 
 // Profile — the donor's account on BURDEN.
 // Three sections:
@@ -14,7 +16,9 @@ import { campaigns, churches } from '../data/mock.js'
 
 const CREDIT_PRESETS = [25, 50, 100, 250]
 
-export default function Profile({ profile, navigate, addCredit, updateName }) {
+export default function Profile({
+  profile, navigate, addCredit, updateName, account, accountError, onSignIn, onSignOut, fundraisers = [], closeFundraiser: markClosed,
+}) {
   const [amount, setAmount] = useState(50)
   const [custom, setCustom] = useState('')
   const [pendingName, setPendingName] = useState(profile?.name || '')
@@ -75,6 +79,9 @@ export default function Profile({ profile, navigate, addCredit, updateName }) {
       <h1 style={{ fontFamily: font.serif, fontSize: type['3xl'].fontSize, fontWeight: 600, letterSpacing: '-1.5%', marginTop: 14, marginBottom: 36 }}>
         Your account on BURDEN.
       </h1>
+
+      <AccountPanel account={account} error={accountError} onSignIn={onSignIn} onSignOut={onSignOut}
+        fundraisers={fundraisers} navigate={navigate} markClosed={markClosed} />
 
       {/* Identity + Credit — side by side on wide screens */}
       <div style={{
@@ -413,6 +420,87 @@ function ImpactSummary({ lifetime, giftCount, burdens, countries, navigate }) {
           }}
         >Giving history</button>
       </div>
+    </section>
+  )
+}
+
+// ── The account: sign in, sign out, delete; the giver's own fundraisers ──
+
+function AccountPanel({ account, error, onSignIn, onSignOut, fundraisers, navigate, markClosed }) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState('')
+  const open = fundraisers.filter(f => !f.closed)
+  const box = { border: '1px solid ' + colors.rule, padding: 28, marginBottom: 28 }
+  const link = { background: 'none', border: 'none', padding: 0, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.ink, textDecoration: 'underline', cursor: 'pointer' }
+
+  async function run(fn) {
+    setBusy(true); setProblem('')
+    try { await fn() } catch (e) { setProblem(e.message) } finally { setBusy(false) }
+  }
+
+  if (!account) {
+    return (
+      <section aria-labelledby="acct-h" style={box}>
+        <Label>Your account</Label>
+        <h2 id="acct-h" style={{ fontSize: 20, fontWeight: 500, margin: '10px 0 16px' }}>Keep your gifts on every device.</h2>
+        <div style={{ maxWidth: 480 }}>
+          <SignIn onSignedIn={onSignIn} intro="Sign in with your email to keep your gifts, their timelines and any fundraiser you start on any phone or computer. Gifts already given with this email are added for you. No password." />
+          {error && <p role="alert" style={{ marginTop: 12, fontSize: 13, color: colors.fundLow }}>{error}</p>}
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section aria-labelledby="acct-h" style={box}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'baseline' }}>
+        <div>
+          <Label>Your account</Label>
+          <h2 id="acct-h" style={{ fontSize: 20, fontWeight: 500, margin: '10px 0 4px', overflowWrap: 'anywhere' }}>{account.email}</h2>
+          <p style={{ margin: 0, fontSize: 13, color: colors.inkSoft }}>Your gifts and fundraisers are kept with this email, on every device you sign in on.</p>
+        </div>
+        <button style={link} disabled={busy} onClick={() => run(() => onSignOut())}>Sign out</button>
+      </div>
+
+      <div style={{ marginTop: 28 }}>
+        <Label>Your fundraisers</Label>
+        {open.length === 0 ? (
+          <p style={{ fontSize: 13, color: colors.inkSoft, margin: '10px 0 0' }}>None open. You can start one from any burden's Share button.</p>
+        ) : open.map(f => {
+          const c = campaigns.find(x => x.id === f.campaignId)
+          return (
+            <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '14px 0', borderBottom: '1px solid ' + colors.ruleSoft, alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{c?.title ?? f.campaignId}</div>
+                <div style={{ fontSize: 12, color: colors.inkMuted }}>{formatMoney(f.raised)} of {formatMoney(f.goal)} with your circle</div>
+              </div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <button style={link} onClick={() => navigate({ name: 'campaign', id: f.campaignId, fundraiserId: f.id })}>See it</button>
+                <button style={link} disabled={busy} onClick={() => run(async () => { await closeFundraiser(f.id); markClosed(f.id) })}>Close</button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ marginTop: 28 }}>
+        {!confirmDelete ? (
+          <button style={{ ...link, color: colors.inkMuted }} onClick={() => setConfirmDelete(true)}>Delete my account</button>
+        ) : (
+          <div role="group" aria-label="Delete my account" style={{ borderTop: '1px solid ' + colors.ruleSoft, paddingTop: 16 }}>
+            <p style={{ fontSize: 13, lineHeight: 1.7, margin: '0 0 12px', maxWidth: 560 }}>
+              Your account and sign-in are deleted, and any open fundraiser closes. Your gifts stay on BURDEN's records —
+              the law needs them for receipts, refunds and Gift Aid — but are no longer linked to you.
+            </p>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <button style={{ ...link, color: colors.fundLow }} disabled={busy} onClick={() => run(() => onSignOut({ remove: true }))}>Yes, delete it</button>
+              <button style={link} onClick={() => setConfirmDelete(false)}>Keep my account</button>
+            </div>
+          </div>
+        )}
+      </div>
+      {problem && <p role="alert" style={{ marginTop: 12, fontSize: 13, color: colors.fundLow }}>{problem}</p>}
     </section>
   )
 }

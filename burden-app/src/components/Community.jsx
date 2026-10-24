@@ -3,6 +3,7 @@ import { colors, tile } from '../theme.js'
 import { Button, Label, Progress, Tile, formatMoney } from './UI.jsx'
 import { formatDay, shareText, shareUrl } from '../lib/community.js'
 import { useT } from '../lib/i18n.jsx'
+import { reportContent } from '../lib/account.js'
 
 // The burden page's community sections — Updates, Words of support,
 // Fundraisers — and the Share sheet. Web twins of
@@ -24,8 +25,50 @@ function SectionHead({ label, count }) {
   )
 }
 
+const REASONS = [
+  ['scam', 'Scam or fraud'], ['abuse', 'Abusive or hateful'], ['false', 'Not true'],
+  ['private', "Shares someone's private details"], ['other', 'Something else'],
+]
+
+// "Report" under an update, a word of support or a fundraiser. It goes to a
+// person on the BURDEN team; nothing is taken down automatically.
+export function ReportLink({ kind, refId, campaignId, text, onNavy = false }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [detail, setDetail] = useState('')
+  const [state, setState] = useState('') // '', 'sending', 'sent', or an error
+  const ink = onNavy ? tile.muted : colors.inkMuted
+  const linkStyle = { background: 'none', border: 'none', padding: 0, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: ink, textDecoration: 'underline', cursor: 'pointer' }
+  if (state === 'sent') return <p role="status" style={{ margin: '8px 0 0', fontSize: 12, color: ink }}>Thank you. The BURDEN team will look at it.</p>
+  if (!open) return <button style={linkStyle} onClick={() => setOpen(true)}>Report</button>
+  return (
+    <div role="group" aria-label="Report this" style={{ marginTop: 10, display: 'grid', gap: 8, color: onNavy ? tile.ink : colors.ink }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="radiogroup" aria-label="Why are you reporting it?">
+        {REASONS.map(([id, label]) => (
+          <button key={id} role="radio" aria-checked={reason === id} onClick={() => setReason(id)} style={{
+            padding: '8px 10px', fontSize: 12, cursor: 'pointer', border: '1px solid ' + (onNavy ? 'rgba(255,255,255,0.4)' : colors.rule),
+            background: reason === id ? (onNavy ? '#fff' : colors.ink) : 'transparent',
+            color: reason === id ? (onNavy ? colors.navyDeep : colors.accentInk) : (onNavy ? tile.ink : colors.ink),
+          }}>{label}</button>
+        ))}
+      </div>
+      <label className="sr-only" htmlFor={`rep-${kind}-${refId}`}>Anything else the team should know</label>
+      <input id={`rep-${kind}-${refId}`} value={detail} maxLength={500} onChange={e => setDetail(e.target.value)} placeholder="Anything else the team should know (optional)"
+        style={{ padding: '10px 12px', fontSize: 13, border: '1px solid ' + (onNavy ? 'rgba(255,255,255,0.4)' : colors.rule), background: 'transparent', color: 'inherit' }} />
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <button style={{ ...linkStyle, color: onNavy ? tile.ink : colors.ink }} disabled={!reason || state === 'sending'} onClick={async () => {
+          setState('sending')
+          try { await reportContent({ kind, ref: String(refId), campaignId, reason, detail, text }); setState('sent') } catch (e) { setState(e.message) }
+        }}>Send report</button>
+        <button style={linkStyle} onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+      {state && state !== 'sending' && <p role="alert" style={{ margin: 0, fontSize: 12, color: colors.fundLow }}>{state}</p>}
+    </div>
+  )
+}
+
 // Dated posts from the burden's team — newest open, older ones folded.
-export function UpdatesSection({ updates }) {
+export function UpdatesSection({ updates, campaignId }) {
   const t = useT()
   const [all, setAll] = useState(false)
   const shown = all ? updates : updates.slice(0, 1)
@@ -42,6 +85,9 @@ export function UpdatesSection({ updates }) {
           <div style={meta}>{formatDay(u.date)} · {u.author}{u.role ? `, ${u.role}` : ''}</div>
           <h3 style={{ marginTop: 8, fontSize: 16, fontWeight: 600, lineHeight: 1.4, color: colors.ink }}>{u.title}</h3>
           <p style={body}>{u.body}</p>
+          <div style={{ marginTop: 10 }}>
+            <ReportLink kind="update" refId={u.id ?? u.date + ' ' + u.title} campaignId={campaignId} text={`${u.title} — ${u.body} (${u.author})`} />
+          </div>
         </article>
       ))}
       {updates.length > 1 && (
@@ -54,7 +100,7 @@ export function UpdatesSection({ updates }) {
 }
 
 // Messages givers leave with their gifts. Never the amount.
-export function SupportSection({ words, onGive }) {
+export function SupportSection({ words, onGive, campaignId }) {
   const t = useT()
   const [all, setAll] = useState(false)
   const shown = all ? words : words.slice(0, 3)
@@ -74,6 +120,7 @@ export function SupportSection({ words, onGive }) {
             <span style={meta}>{formatDay(w.date)}</span>
           </div>
           <p style={{ ...body, marginTop: 6, color: colors.ink }}>{w.message}</p>
+          {!w.own && <ReportLink kind="support" refId={w.id ?? w.date + ' ' + w.name} campaignId={campaignId} text={`“${w.message}” — ${w.name}`} />}
         </div>
       ))}
       <div style={{ display: 'flex', gap: 24, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -87,7 +134,7 @@ export function SupportSection({ words, onGive }) {
 }
 
 // People carrying this burden with their own circle.
-export function FundraisersSection({ fundraisers, highlightId, onGiveThrough, onStart }) {
+export function FundraisersSection({ fundraisers, highlightId, onGiveThrough, onStart, campaignId }) {
   const t = useT()
   return (
     <div>
@@ -115,6 +162,7 @@ export function FundraisersSection({ fundraisers, highlightId, onGiveThrough, on
                 Give through {f.own ? 'your page' : f.name.split(' ')[0]}
               </Button>
             </div>
+            {!f.own && <ReportLink kind="fundraiser" refId={f.id} campaignId={campaignId} text={`${f.name}: ${f.note}`} onNavy />}
           </Tile>
         ))}
       </div>

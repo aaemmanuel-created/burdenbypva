@@ -3,6 +3,9 @@ import { colors, tile, font, type } from '../theme.js'
 import { Button, Label, Rule, Progress, Badge, Tile, FundingSquare, formatMoney } from '../components/UI.jsx'
 import { FundraisersSection, ShareSheet, SupportSection, UpdatesSection } from '../components/Community.jsx'
 import { findFundraiser, fundraisersFor, supportFor, updatesFor } from '../lib/community.js'
+import { fetchFundraiser, fetchFundraisers } from '../lib/account.js'
+import { authLive } from '../lib/auth.js'
+import { isHidden, useDemoTrust } from '../lib/trust.js'
 import { campaigns, churches } from '../data/mock.js'
 import { fetchSupportWords, liveCheckout } from '../lib/payments.js'
 import { fetchBurdenUpdates } from '../lib/church.js'
@@ -33,6 +36,20 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
     fetchBurdenUpdates(id).then(r => { if (!stop) setLiveUpdates(r.updates) }).catch(() => { if (!stop) setLiveUpdates([]) })
     return () => { stop = true }
   }, [id])
+  // Everyone's fundraisers on this burden (live: the server; demo: every
+  // account in this browser), plus the one a shared link points at.
+  const [publicFundraisers, setPublicFundraisers] = useState([])
+  useEffect(() => {
+    let stop = false
+    Promise.all([
+      fetchFundraisers(id).catch(() => []),
+      fundraiserId ? fetchFundraiser(fundraiserId).catch(() => null) : null,
+    ]).then(([list, one]) => {
+      if (!stop) setPublicFundraisers(one && !list.some(f => f.id === one.id) ? [...list, one] : list)
+    })
+    return () => { stop = true }
+  }, [id, fundraiserId])
+  const trust = useDemoTrust()
   const fundraisersRef = useRef(null)
   // A shared fundraiser link lands on that fundraiser.
   useEffect(() => {
@@ -50,11 +67,14 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
   const church = churches.find(ch => ch.id === burden.churchId)
   const pct = Math.round((burden.raised / burden.goal) * 100)
   // Demo: the seeded updates plus any posted from the church dashboard in this browser.
-  const updates = liveUpdates ?? [...churchUpdates.filter(u => u.campaignId === burden.id), ...updatesFor(burden.id)]
-    .sort((a, b) => b.date.localeCompare(a.date))
-  const words = supportFor(burden.id, gifts, liveWords)
-  const carrying = fundraisersFor(burden.id, fundraisers, gifts)
-  const sharedFundraiser = findFundraiser(fundraiserId, fundraisers)
+  // (Demo: minus anything a reviewer removed after a report; live, the server leaves it out.)
+  const updates = (liveUpdates ?? [...churchUpdates.filter(u => u.campaignId === burden.id), ...updatesFor(burden.id)]
+    .sort((a, b) => b.date.localeCompare(a.date))).filter(u => !isHidden(trust, 'update', u.id ?? u.date + ' ' + u.title))
+  const words = supportFor(burden.id, gifts, liveWords).filter(w => !isHidden(trust, 'support', w.id ?? w.date + ' ' + w.name))
+  const known = [...fundraisers, ...publicFundraisers.filter(p => !fundraisers.some(f => f.id === p.id))].filter(f => !f.closed || f.id === fundraiserId)
+  // Live totals already count every gift through a fundraiser; the demo adds this browser's.
+  const carrying = fundraisersFor(burden.id, known, authLive ? [] : gifts).filter(f => !isHidden(trust, 'fundraiser', f.id))
+  const sharedFundraiser = findFundraiser(fundraiserId, known)
 
   // Itemised allocation — published in plain language per BURDEN principle.
   const items = [
@@ -116,7 +136,7 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* Updates — dated posts from the team */}
           <section style={{ padding: '32px 0' }}>
-            <UpdatesSection updates={updates} />
+            <UpdatesSection updates={updates} campaignId={burden.id} />
           </section>
 
           <Rule soft />
@@ -191,14 +211,14 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
 
           {/* Words of support — from givers, never with the amount */}
           <section style={{ padding: '32px 0' }}>
-            <SupportSection words={words} onGive={() => navigate({ name: 'give', id: burden.id })} />
+            <SupportSection words={words} campaignId={burden.id} onGive={() => navigate({ name: 'give', id: burden.id })} />
           </section>
 
           <Rule soft />
 
           {/* Fundraisers — people carrying it with their own circle */}
           <section ref={fundraisersRef} style={{ padding: '32px 0' }}>
-            <FundraisersSection
+            <FundraisersSection campaignId={burden.id}
               fundraisers={carrying}
               highlightId={fundraiserId}
               onGiveThrough={f => navigate({ name: 'give', id: burden.id, fundraiserId: f.id })}
