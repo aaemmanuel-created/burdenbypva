@@ -87,7 +87,9 @@ export default function Discover({ navigate }) {
       if (country !== ALL && co !== country) return false
       if (city !== ALL && ci !== city) return false
       if (query) {
-        const hay = (c.title + ' ' + c.summary + ' ' + ch.name + ' ' + ch.location).toLowerCase()
+        // Title, summary, objective, category, church, tradition, place and team names.
+        const hay = [c.title, c.summary, c.objective, c.category, ch.name, ch.location, ch.tradition,
+          ...(c.team || []).map(m => m.name)].join(' ').toLowerCase()
         if (!hay.includes(query.toLowerCase())) return false
       }
       return true

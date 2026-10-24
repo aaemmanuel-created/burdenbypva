@@ -116,7 +116,9 @@ export default function Campaign({ id, navigate, joined, onTogglePrayer, gifts =
           {/* Profiles — the people carrying this burden */}
           <section style={{ padding: '32px 0' }}>
             <Label>Profiles</Label>
-            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingTop: 16, paddingBottom: 4 }}>
+            {/* Scrolls sideways: focusable so keyboard users can scroll it (WCAG 2.1.1). */}
+            <div tabIndex={0} role="region" aria-label="Profiles of the people carrying this burden"
+              style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingTop: 16, paddingBottom: 4 }}>
               {burden.team.map(member => <ProfileTile key={member.role} member={member} />)}
             </div>
           </section>

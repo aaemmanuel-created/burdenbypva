@@ -7,7 +7,7 @@ export const colors = {
   bgAlt: '#ecebe5',
   ink: '#0a0a0a',
   inkSoft: '#4a4a4a',
-  inkMuted: '#8a8a85',
+  inkMuted: '#676762', // was #8a8a85 (3.2:1) — darkened 2026-10-24 for WCAG AA 4.5:1
   rule: '#1a1a1a',
   ruleSoft: '#d8d6cf',
   accent: '#1a1a1a',
@@ -29,7 +29,7 @@ export const colors = {
   navyRule:  'rgba(255,255,255,0.10)',
 
   // Funding banner tones
-  fundLow:  '#c44a3e',
+  fundLow:  '#b8433a', // was #c44a3e (4.4:1) — WCAG AA
   fundMid:  '#e09a2d',   // amber
   fundHigh: '#3f8a5a',
 } as const;

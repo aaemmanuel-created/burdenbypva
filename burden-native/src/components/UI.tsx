@@ -32,6 +32,8 @@ export function Button({
       <Pressable
         onPress={onPress}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !!disabled }}
         style={({ pressed }) => [styles.btnOnNavy, disabled && { opacity: 0.4 }, pressed && { opacity: 0.8 }, style]}
       >
         <Text style={[styles.btnText, styles.btnTextOnNavy]}>
@@ -44,6 +46,8 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         styles.btn,
         isPrimary ? styles.btnPrimary : styles.btnGhost,

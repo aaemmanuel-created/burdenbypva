@@ -117,7 +117,8 @@ export default function FundraiseScreen({ route, navigation }: Props) {
         {PRESETS.map((p) => {
           const active = custom === '' && goal === p;
           return (
-            <Pressable key={p} onPress={() => { setGoal(p); setCustom(''); }} style={[styles.preset, active && styles.presetActive]}>
+            <Pressable key={p} onPress={() => { setGoal(p); setCustom(''); }} style={[styles.preset, active && styles.presetActive]}
+              accessibilityRole="radio" accessibilityState={{ selected: active }} accessibilityLabel={`Goal $${p}`}>
               <Text style={[styles.presetText, active && styles.presetTextActive]}>${p}</Text>
             </Pressable>
           );

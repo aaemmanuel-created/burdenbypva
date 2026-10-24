@@ -36,7 +36,9 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
       if (cat !== 'All' && c.category !== cat) return false;
       if (query) {
         const ch = churches.find((ch) => ch.id === c.churchId);
-        const hay = (c.title + ' ' + c.summary + ' ' + ch?.name + ' ' + ch?.location).toLowerCase();
+        // Title, summary, objective, category, church, tradition, place and team names.
+        const hay = [c.title, c.summary, c.objective, c.category, ch?.name, ch?.location, ch?.tradition,
+          ...(c.team || []).map((m) => m.name)].join(' ').toLowerCase();
         if (!hay.includes(query.toLowerCase())) return false;
       }
       return true;
@@ -52,6 +54,14 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
       data={filtered}
       keyExtractor={(item) => item.id}
       contentContainerStyle={{ paddingBottom: DOCK_SPACE + 32 }}
+      ListEmptyComponent={
+        <View style={{ paddingHorizontal: 20, paddingVertical: 32, alignItems: 'flex-start', gap: 12 }}>
+          <Text style={styles.empty}>No burdens match your search.</Text>
+          <Pressable onPress={() => { setQuery(''); setCat('All'); }} accessibilityRole="button" hitSlop={8}>
+            <Text style={[styles.empty, { textDecorationLine: 'underline', color: colors.ink }]}>Clear search</Text>
+          </Pressable>
+        </View>
+      }
       ListHeaderComponent={
         <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
           <Label>Discover</Label>
@@ -69,6 +79,8 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
                 <Pressable
                   key={c}
                   onPress={() => setCat(c)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
                   style={[styles.chip, active && styles.chipActive]}
                 >
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>
@@ -131,6 +143,7 @@ export default function DiscoverScreen({ navigation }: { navigation: Nav }) {
 }
 
 const styles = StyleSheet.create({
+  empty: { fontFamily: font.regular, fontSize: 13, color: colors.inkSoft },
   h1: {
     fontFamily: font.regular,
     fontSize: 28,

@@ -10,7 +10,7 @@ export const colors = {
   bgAlt: '#ecebe5',       // subtle panel
   ink: '#0a0a0a',         // primary text
   inkSoft: '#4a4a4a',     // secondary text
-  inkMuted: '#8a8a85',    // tertiary / labels
+  inkMuted: '#676762',    // tertiary / labels — was #8a8a85 (3.2:1); darkened 2026-10-24 for WCAG AA 4.5:1
   rule: '#1a1a1a',        // hairlines & strong borders (inputs + hero card ONLY per §4)
   ruleSoft: '#d8d6cf',    // soft dividers (inputs only per §4)
   accent: '#1a1a1a',      // primary action (mono, restrained)
@@ -34,7 +34,7 @@ export const colors = {
   navyLo:      'rgba(0,0,0,0.38)',        // bottom shadow inside tile
 
   // Funding square tones: red (under a third), amber (halfway), green (almost / fully)
-  fundLow:  '#c44a3e',
+  fundLow:  '#b8433a', // was #c44a3e (4.4:1) — WCAG AA
   fundMid:  '#e09a2d',
   fundHigh: '#3f8a5a',
 }

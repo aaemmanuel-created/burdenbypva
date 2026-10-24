@@ -218,6 +218,9 @@ export default function GiveScreen({ route, navigation }: Props) {
             <Pressable
               key={p}
               onPress={() => { setAmount(p); setCustom(''); }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`Give $${p}`}
               style={[styles.preset, active && styles.presetActive]}
             >
               <Text style={[styles.presetText, active && styles.presetTextActive]}>${p}</Text>
@@ -498,7 +501,8 @@ function Toggle({
   checked, onChange, label, help,
 }: { checked: boolean; onChange: (v: boolean) => void; label: string; help: string }) {
   return (
-    <Pressable onPress={() => onChange(!checked)} style={styles.toggleRow}>
+    <Pressable onPress={() => onChange(!checked)} style={styles.toggleRow}
+      accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={label} accessibilityHint={help}>
       <View style={[styles.toggleBox, checked && { backgroundColor: colors.ink }]} />
       <View style={{ flex: 1 }}>
         <Text style={styles.toggleLabel}>{label}</Text>
