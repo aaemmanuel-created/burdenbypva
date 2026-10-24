@@ -8,7 +8,7 @@ import {
   fundraiserId, giverGift, parseFundraiser, publicFundraiser, raisedBy,
 } from '../functions/_shared/account-logic.ts';
 import {
-  auditEntry, checksFor, churchIdFor, flagsFor, missingFor, parseApplication, parseBurdenEdit, parseReport, tierEarned,
+  auditEntry, checksFor, churchIdFor, flagsFor, missingFor, parseApplication, parseBurdenEdit, parseLogChange, parseReport, tierEarned,
 } from '../functions/_shared/admin-logic.ts';
 import { parseGiftInput, type ChargeConfig } from '../functions/_shared/gift-input.ts';
 
@@ -144,4 +144,14 @@ test('the audit log never stores emails, phone numbers or account numbers in its
   });
   assert.deepEqual(e.detail, { note: 'Paystack name matched', tier: 'Verified' });
   assert.equal(e.actor, 'Ruth <ruth@burden.org>');
+});
+
+test('owners can correct or remove a log entry, but always say why', () => {
+  assert.deepEqual(parseLogChange({ id: 7, note: 'Register entry G-48213 seen', reason: 'Typo in the number' }),
+    { ok: true, value: { id: 7, remove: false, note: 'Register entry G-48213 seen', reason: 'Typo in the number' } });
+  assert.deepEqual(parseLogChange({ id: 7, remove: true, reason: 'Logged against the wrong church' }),
+    { ok: true, value: { id: 7, remove: true, note: null, reason: 'Logged against the wrong church' } });
+  assert.equal(parseLogChange({ id: 7, note: 'x', reason: '' }).ok, false);
+  assert.equal(parseLogChange({ id: 7, reason: 'no note given' }).ok, false);
+  assert.equal(parseLogChange({ id: 'x', remove: true, reason: 'wrong one' }).ok, false);
 });

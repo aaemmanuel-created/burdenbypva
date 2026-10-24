@@ -160,3 +160,17 @@ export function auditEntry(actor: string, action: string, subjectType: string, s
   }
   return { actor: actor.slice(0, 160), action, subject_type: subjectType, subject_id: String(subjectId).slice(0, 120), detail: clean };
 }
+
+// An owner's correction to a log entry: a new note and/or removal, always
+// with a reason (the database keeps the earlier version).
+export function parseLogChange(b: Record<string, unknown>):
+  { ok: true; value: { id: number; remove: boolean; note: string | null; reason: string } } | { ok: false; error: string } {
+  const id = Number(b.id);
+  if (!Number.isInteger(id) || id <= 0) return { ok: false, error: 'Which entry?' };
+  const reason = str(b.reason, 500);
+  if (reason.length < 5) return { ok: false, error: 'Say why you are changing it.' };
+  const remove = b.remove === true;
+  const note = typeof b.note === 'string' ? b.note.trim().slice(0, 500) : null;
+  if (!remove && note === null) return { ok: false, error: 'Write the corrected note.' };
+  return { ok: true, value: { id, remove, note: remove ? null : note, reason } };
+}

@@ -143,23 +143,55 @@ create table public.burden_admins (
 alter table public.burden_admins enable row level security;
 
 -- Every decision a person makes about money, churches or content: who, what,
--- on what, and why. Append-only — the database refuses edits and deletes.
+-- on what, and why. An owner can correct an entry or remove it (Emmanuel,
+-- 2026-10-26: the log should not be unchangeable), but never silently: the
+-- entry records who changed it and why, and the earlier version is copied to
+-- audit_log_history by the database itself. Removing marks the entry; rows are
+-- never deleted.
 create table public.audit_log (
-  id            bigint generated always as identity primary key,
-  at            timestamptz not null default now(),
-  actor         text not null,
-  action        text not null,
-  subject_type  text not null,
-  subject_id    text not null,
-  detail        jsonb not null default '{}'
+  id                 bigint generated always as identity primary key,
+  at                 timestamptz not null default now(),
+  actor              text not null,
+  action             text not null,
+  subject_type       text not null,
+  subject_id         text not null,
+  detail             jsonb not null default '{}',
+  changed_at         timestamptz,       -- last correction or removal
+  changed_by         text,
+  change_reason      text,
+  removed_at         timestamptz        -- hidden from the log, kept in the table
 );
-create index audit_log_at_idx on public.audit_log (at desc);
+create index audit_log_at_idx on public.audit_log (at desc) where removed_at is null;
 create index audit_log_subject_idx on public.audit_log (subject_type, subject_id);
 alter table public.audit_log enable row level security;
 
-create function public.audit_log_append_only() returns trigger language plpgsql as $$
+create table public.audit_log_history (
+  id          bigint generated always as identity primary key,
+  entry_id    bigint not null references public.audit_log (id),
+  saved_at    timestamptz not null default now(),
+  previous    jsonb not null      -- the entry as it was before the change
+);
+create index audit_log_history_entry_idx on public.audit_log_history (entry_id);
+alter table public.audit_log_history enable row level security;
+
+create function public.audit_log_keep_history() returns trigger language plpgsql as $$
 begin
-  raise exception 'audit_log is append-only';
+  if tg_op = 'DELETE' then
+    raise exception 'audit_log entries are removed by marking them (removed_at), not deleted';
+  end if;
+  if new.changed_by is null or new.change_reason is null or new.changed_at is not distinct from old.changed_at then
+    raise exception 'a change to audit_log needs changed_at, changed_by and change_reason';
+  end if;
+  insert into public.audit_log_history (entry_id, previous) values (old.id, to_jsonb(old));
+  return new;
 end $$;
-create trigger audit_log_no_update before update or delete on public.audit_log
-  for each row execute function public.audit_log_append_only();
+create trigger audit_log_changes before update or delete on public.audit_log
+  for each row execute function public.audit_log_keep_history();
+
+-- The earlier versions are not changed or deleted by anyone.
+create function public.audit_log_history_fixed() returns trigger language plpgsql as $$
+begin
+  raise exception 'audit_log_history cannot be changed';
+end $$;
+create trigger audit_log_history_no_change before update or delete on public.audit_log_history
+  for each row execute function public.audit_log_history_fixed();

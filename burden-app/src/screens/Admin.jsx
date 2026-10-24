@@ -44,7 +44,9 @@ export default function Admin({ navigate, demoPayouts, setDemoPayout }) {
       church_id: id, method: p.method, network: p.network, account_name: p.accountName,
       account_number: '•••• ' + String(p.accountNumber).slice(-4), submitted_by: 'church dashboard', updated_at: p.submittedAt,
     })),
-    audit: trust.audit,
+    audit: trust.audit.filter(e => !e.removed_at),
+    auditRemoved: trust.audit.filter(e => e.removed_at),
+    auditHistory: trust.auditHistory || [],
   }), [trust, demoPayouts])
   const data = authLive ? live : demo
 
@@ -109,7 +111,7 @@ export default function Admin({ navigate, demoPayouts, setDemoPayout }) {
           {tab === 'Burden wording' && <Wording data={data} act={act} navigate={navigate} />}
           {tab === 'Words & reports' && <WordsReports data={data} act={act} />}
           {tab === 'Money' && <Money data={data} act={act} />}
-          {tab === 'Audit log' && <Audit data={data} />}
+          {tab === 'Audit log' && <Audit data={data} act={act} />}
         </>
       )}
     </main>
@@ -141,7 +143,7 @@ function Overview({ counts, setTab }) {
       ))}
       <p style={{ marginTop: 24, fontSize: 12, lineHeight: 1.7, color: colors.inkMuted, maxWidth: 640 }}>
         Every decision here asks for a reason and is written to the audit log with your name. Givers' emails and
-        account numbers never appear in it.
+        account numbers never appear in it. Owners can correct an entry; the earlier version is kept.
       </p>
     </section>
   )
@@ -385,31 +387,83 @@ function Money({ data, act }) {
   )
 }
 
-function Audit({ data }) {
-  if (!data.audit.length) return <p style={{ ...empty, paddingTop: 20 }}>Nothing yet.</p>
+// The log. Owners can correct a note or remove an entry — always with a
+// reason, and the earlier version stays visible to owners under the entry.
+function Audit({ data, act }) {
+  const [showRemoved, setShowRemoved] = useState(false)
+  const owner = data.me.role === 'owner'
+  const removed = data.auditRemoved || []
+  const rows = showRemoved ? removed : data.audit
   return (
-    <section style={{ paddingTop: 20, overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-        <caption className="sr-only">Audit log, newest first</caption>
-        <thead>
-          <tr style={{ textAlign: 'left', color: colors.inkMuted, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>
-            <th scope="col" style={th}>When</th><th scope="col" style={th}>Who</th><th scope="col" style={th}>What</th><th scope="col" style={th}>On</th><th scope="col" style={th}>Detail</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.audit.map(e => (
-            <tr key={e.id} style={{ borderTop: '1px solid ' + colors.ruleSoft, verticalAlign: 'top' }}>
-              <td style={td}>{new Date(e.at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</td>
-              <td style={td}>{e.actor}</td>
-              <td style={td}>{e.action}</td>
-              <td style={td}>{e.subject_type} {e.subject_id}</td>
-              <td style={{ ...td, color: colors.inkSoft }}>{Object.entries(e.detail || {}).filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && !v.length)).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p style={{ fontSize: 12, color: colors.inkMuted, marginTop: 12 }}>The log cannot be edited or deleted — the database refuses it.</p>
+    <section style={{ paddingTop: 20 }}>
+      {owner && removed.length > 0 && (
+        <button style={{ ...linkBtn, marginBottom: 12 }} onClick={() => setShowRemoved(v => !v)}>
+          {showRemoved ? 'Back to the log' : `Show removed entries (${removed.length})`}
+        </button>
+      )}
+      {!rows.length && <p style={empty}>Nothing yet.</p>}
+      {rows.map(e => <AuditRow key={e.id} e={e} owner={owner} act={act}
+        history={(data.auditHistory || []).filter(h => h.entry_id === e.id)} />)}
+      <p style={{ fontSize: 12, color: colors.inkMuted, marginTop: 16, lineHeight: 1.6 }}>
+        Owners can correct or remove an entry. Every change says who made it and why, and the earlier version is kept.
+      </p>
     </section>
+  )
+}
+
+const detailText = d => Object.entries(d || {})
+  .filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && !v.length))
+  .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ')
+const when = iso => new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+
+function AuditRow({ e, owner, act, history }) {
+  const [mode, setMode] = useState('') // '', 'correct', 'remove'
+  const [note, setNote] = useState(e.detail?.note ?? '')
+  const [reason, setReason] = useState('')
+  const [showOld, setShowOld] = useState(false)
+  return (
+    <div style={{ padding: '14px 0', borderTop: '1px solid ' + colors.ruleSoft, fontSize: 13 }}>
+      <div style={meta}>{when(e.at)} · {e.actor}</div>
+      <div style={{ marginTop: 6 }}><strong style={{ fontWeight: 600 }}>{e.action}</strong> — {e.subject_type} {e.subject_id}</div>
+      {detailText(e.detail) && <div style={{ marginTop: 4, color: colors.inkSoft }}>{detailText(e.detail)}</div>}
+      {e.changed_at && (
+        <div style={{ marginTop: 6, fontSize: 12, color: colors.warn }}>
+          {e.removed_at ? 'Removed' : 'Corrected'} {when(e.changed_at)} by {e.changed_by}: {e.change_reason}
+          {owner && history.length > 0 && (
+            <button style={{ ...linkBtn, marginLeft: 12, fontSize: 11 }} onClick={() => setShowOld(v => !v)}>
+              {showOld ? 'Hide earlier version' : 'See earlier version'}
+            </button>
+          )}
+        </div>
+      )}
+      {showOld && history.map((h, i) => (
+        <div key={i} style={{ marginTop: 6, padding: '8px 12px', borderLeft: '2px solid ' + colors.ruleSoft, fontSize: 12, color: colors.inkSoft }}>
+          Before {when(h.saved_at)}: {detailText(h.previous?.detail) || '(no detail)'}
+        </div>
+      ))}
+      {owner && !e.removed_at && !mode && (
+        <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+          <button style={{ ...linkBtn, fontSize: 11 }} onClick={() => setMode('correct')}>Correct</button>
+          <button style={{ ...linkBtn, fontSize: 11 }} onClick={() => setMode('remove')}>Remove</button>
+        </div>
+      )}
+      {mode && (
+        <div style={{ display: 'grid', gap: 8, marginTop: 10, maxWidth: 560 }}>
+          {mode === 'correct' && (
+            <input aria-label="Corrected note" value={note} maxLength={500} onChange={ev => setNote(ev.target.value)} placeholder="The corrected note" style={input} />
+          )}
+          <input aria-label="Why you are changing it" value={reason} maxLength={500} onChange={ev => setReason(ev.target.value)} placeholder="Why you are changing it" style={input} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button disabled={reason.trim().length < 5} onClick={async () => {
+              const ok = await act('audit_change', { id: e.id, remove: mode === 'remove', note: note.trim(), reason: reason.trim() },
+                mode === 'remove' ? 'Removed from the log. The entry is kept for owners, with your reason.' : 'Corrected. The earlier version is kept.')
+              if (ok) { setMode(''); setReason('') }
+            }}>{mode === 'remove' ? 'Remove entry' : 'Save correction'}</Button>
+            <Button variant="ghost" onClick={() => setMode('')}>Cancel</Button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -423,5 +477,3 @@ const card = { border: '1px solid ' + colors.rule, padding: 20, marginTop: 16 }
 const meta = { fontSize: 11, letterSpacing: 1, color: colors.inkMuted, textTransform: 'uppercase', lineHeight: 1.6 }
 const empty = { fontSize: 13, color: colors.inkSoft, margin: '10px 0 0', lineHeight: 1.6 }
 const dl = { display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '6px 16px', fontSize: 13, margin: '16px 0 0', lineHeight: 1.6 }
-const th = { padding: '10px 8px 10px 0', fontWeight: 500 }
-const td = { padding: '12px 8px 12px 0' }

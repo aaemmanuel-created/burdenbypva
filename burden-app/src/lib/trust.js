@@ -215,6 +215,18 @@ export function demoAdminAction(action, f, actor, hooks = {}) {
       log(f.decision === 'remove' ? 'report.remove' : 'report.keep', r.kind, r.ref, { report: r.id, reason: r.reason, note: f.note })
       break
     }
+    case 'audit_change': {
+      // An owner corrects or removes an entry; the earlier version is kept (functions/admin).
+      if (!f.reason || f.reason.trim().length < 5) throw new Error('Say why you are changing it.')
+      const entry = s.audit.find(e => e.id === f.id)
+      s.auditHistory = [...(s.auditHistory || []), { entry_id: f.id, saved_at: now, previous: entry }]
+      s.audit = s.audit.map(e => e.id !== f.id ? e : {
+        ...e, changed_at: now, changed_by: actor, change_reason: f.reason.trim(),
+        ...(f.remove ? { removed_at: now } : { detail: { ...e.detail, note: f.note } }),
+      })
+      writeDemo(s)
+      return
+    }
     case 'screening':
       need('Write what you compared (dates of birth, places, etc.).')
       s.screening = s.screening.filter(x => x.id !== f.id)

@@ -10,7 +10,7 @@
 //   POST /admin { action, … } — see the switch below. Every action needs a
 //        `note` where a person's judgement is involved; it goes in the log.
 
-import { churchIdFor, KYB_CHECKS, missingFor, type Checks, type Tier, TIERS } from '../_shared/admin-logic.ts';
+import { churchIdFor, KYB_CHECKS, missingFor, parseLogChange, type Checks, type Tier, TIERS } from '../_shared/admin-logic.ts';
 import { type Admin, adminOf, audit, hasAdminKey, signedInUser } from '../_shared/auth.ts';
 import { BURDENS } from '../_shared/burdens.ts';
 import { maskAccount } from '../_shared/church-logic.ts';
@@ -43,9 +43,17 @@ Deno.serve(async (req) => {
       db.from('screening_results').select('*').neq('decision', 'clear').is('reviewed_at', null).order('created_at').limit(100),
       db.from('church_payout_accounts').select('church_id, method, network, account_name, account_number, submitted_by, updated_at').is('verified_at', null),
       db.from('burden_updates').select('id, created_at, campaign_id, church_id, author, title, body').is('hidden_at', null).order('created_at', { ascending: false }).limit(30),
-      db.from('audit_log').select('*').order('at', { ascending: false }).limit(200),
+      db.from('audit_log').select('*').is('removed_at', null).order('at', { ascending: false }).limit(200),
       me.role === 'owner' ? db.from('burden_admins').select('email, name, role, added_at').is('removed_at', null) : Promise.resolve({ data: [] }),
     ]);
+    // Owners also see removed entries and earlier versions of corrected ones.
+    const removed = me.role === 'owner'
+      ? (await db.from('audit_log').select('*').not('removed_at', 'is', null).order('removed_at', { ascending: false }).limit(100)).data ?? []
+      : [];
+    const changedIds = [...(log.data ?? []), ...removed].filter((e) => e.changed_at).map((e) => e.id);
+    const history = me.role === 'owner' && changedIds.length
+      ? (await db.from('audit_log_history').select('entry_id, saved_at, previous').in('entry_id', changedIds).order('saved_at')).data ?? []
+      : [];
 
     // What each report points at, so the reviewer reads it in place.
     const items = await Promise.all((reports.data ?? []).map(async (r) => {
@@ -79,6 +87,8 @@ Deno.serve(async (req) => {
       payouts: (payouts.data ?? []).map((p) => ({ ...p, account_number: maskAccount(String(p.account_number)) })),
       updates: updates.data ?? [],
       audit: log.data ?? [],
+      auditRemoved: removed,
+      auditHistory: history,
       admins: admins.data ?? [],
     });
   }
@@ -216,6 +226,21 @@ Deno.serve(async (req) => {
       }
       // A donor's email never goes in the log — the screening row id does.
       await audit(actor, `screening.${b.outcome}`, 'screening', id, { subject: row.subject_type, note });
+      return json({ ok: true });
+    }
+
+    // ── The log itself: an owner corrects or removes an entry, with a reason ──
+    case 'audit_change': {
+      if (me.role !== 'owner') return json({ error: 'Only an owner can change the log.' }, 403);
+      const c = parseLogChange(b);
+      if (!c.ok) return json({ error: c.error }, 400);
+      const { data: entry } = await db.from('audit_log').select('detail, removed_at').eq('id', c.value.id).maybeSingle();
+      if (!entry) return json({ error: 'Entry not found.' }, 404);
+      const patch: Record<string, unknown> = { changed_at: now(), changed_by: actor, change_reason: c.value.reason };
+      if (c.value.remove) patch.removed_at = now();
+      else patch.detail = { ...(entry.detail ?? {}), note: c.value.note };
+      const { error } = await db.from('audit_log').update(patch).eq('id', c.value.id);
+      if (error) return json({ error: 'Could not change the entry.' }, 500);
       return json({ ok: true });
     }
 

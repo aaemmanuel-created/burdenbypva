@@ -185,7 +185,7 @@ Migration `20261026000000_accounts_admin.sql`; new functions `account`, `fundrai
 
 **Reports.** Every update, word of support and fundraiser has a Report link. Nothing is taken down automatically.
 
-**The BURDEN team console** (website footer → BURDEN team): churches (applications, tiers, suspend), burden wording, held words of support, public reports, sanctions matches, payout accounts to verify, and the **audit log** — every decision needs a reason and is logged with the person's name; the database refuses edits or deletes to the log, and givers' emails and account numbers are never written into it. A suspended church is paid nothing (`run-payouts` checks). Add the first owner once:
+**The BURDEN team console** (website footer → BURDEN team): churches (applications, tiers, suspend), burden wording, held words of support, public reports, sanctions matches, payout accounts to verify, and the **audit log** — every decision needs a reason and is logged with the person's name, and givers' emails and account numbers are never written into it. An owner can correct an entry's note or remove an entry (Emmanuel, 2026-10-26), always with a reason: the entry shows who changed it and why, the database copies the earlier version into `audit_log_history` itself, removed entries stay visible to owners, and nothing is ever deleted. A suspended church is paid nothing (`run-payouts` checks). Add the first owner once:
 ```bash
 curl -X POST https://<project>.supabase.co/functions/v1/admin -H "x-burden-admin-key: <CHURCH_ADMIN_KEY>" -H "Content-Type: application/json" -d '{"action":"admin_add","email":"you@example.org","name":"Your Name","role":"owner"}'
 ```
