@@ -8,10 +8,11 @@
 
 import { timingSafeEqual } from '../_shared/crypto.ts';
 import { BURDENS } from '../_shared/burdens.ts';
-import { parseGiftInput } from '../_shared/gift-input.ts';
+import { chargeNow } from '../_shared/duties.ts';
+import { intake } from '../_shared/intake.ts';
 import { chargeMomo, normaliseGhanaPhone } from '../_shared/momo.ts';
 import { networkFromCode, ussdStep } from '../_shared/ussd-logic.ts';
-import { ALLOWED_RETURN_PREFIXES, charge, db, insertGift, isTestKey, LIVE_ALLOWED, secrets } from '../_shared/server.ts';
+import { ALLOWED_RETURN_PREFIXES, db, insertGift, secrets } from '../_shared/server.ts';
 
 const reply = (text: string) => new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 
@@ -22,28 +23,31 @@ Deno.serve(async (req) => {
 
   const form = await req.formData().catch(() => null);
   const path = String(form?.get('text') ?? '');
-  const rate = charge.usdRate.paystack;
+  let rate: number;
+  try {
+    rate = (await chargeNow()).config.usdRate.paystack;
+  } catch {
+    return reply('END Giving is paused for a moment. Please try again shortly.');
+  }
   const step = ussdStep(path, BURDENS, rate);
   if (step.kind !== 'charge') return reply(`${step.kind.toUpperCase()} ${step.text}`);
 
   const phone = normaliseGhanaPhone(String(form?.get('phoneNumber') ?? ''));
   const network = networkFromCode(String(form?.get('networkCode') ?? ''));
   if (!phone || !network) return reply('END Mobile money giving works on MTN, Telecel and AirtelTigo numbers in Ghana.');
-  if (!isTestKey('paystack') && !LIVE_ALLOWED) return reply('END Giving by USSD is not switched on yet.');
-
   const b = step.burden;
-  const parsed = parseGiftInput({
-    provider: 'paystack', amount: step.ghs / rate, coverFee: true, anonymous: true,
-    // USSD donors have no email; Paystack needs one for the charge. Receipts by SMS are a follow-up.
+  const prepared = await intake({
+    amount: step.ghs / rate, coverFee: true, anonymous: true,
+    // USSD donors have no email; Paystack needs one for the charge. Receipts go by SMS.
     email: `${phone.slice(1)}@ussd.burden.invalid`,
     campaignId: b.id, campaignTitle: b.title, churchId: b.churchId, churchName: b.churchName,
     returnUrl: ALLOWED_RETURN_PREFIXES.find((p) => p.startsWith('https://')) ?? ALLOWED_RETURN_PREFIXES[0],
-  }, charge, ALLOWED_RETURN_PREFIXES);
-  if (!parsed.ok) return reply(`END ${parsed.error}`);
+  }, 'paystack');
+  if (!prepared.ok) return reply(`END ${prepared.error}`);
 
   try {
-    const { gift } = await insertGift(parsed.value, isTestKey('paystack'), {
-      momo_phone: phone, momo_network: network, payment_method: 'mobile_money',
+    const { gift } = await insertGift(prepared.input, prepared.testMode, {
+      ...prepared.extra, momo_phone: phone, momo_network: network, payment_method: 'mobile_money',
     });
     const next = await chargeMomo(gift, phone, network, secrets);
     if (next.state === 'failed') {

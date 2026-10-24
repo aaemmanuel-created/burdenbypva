@@ -18,6 +18,7 @@ export type PayoutGift = {
   fx_rate: number;        // USD → charge currency
   charge_currency: string;
   test_mode: boolean;
+  screening?: string; // sanctions screening: only 'clear' gifts are paid out
 };
 
 // The church receives the gift itself; the covered fee pays processing and
@@ -29,6 +30,7 @@ export function payoutAmountMinor(g: PayoutGift): number {
 // Why a gift can't be sent automatically yet — or null when it can.
 export function payoutBlocker(g: PayoutGift, a: PayoutAccount | null): string | null {
   if (g.test_mode) return 'test gift';
+  if (g.screening && g.screening !== 'clear') return 'giver is waiting for a sanctions review';
   if (!a || !a.verified_at) return 'church has no verified payout account';
   if (!a.paystack_recipient) return 'payout account is not registered with Paystack';
   // Paystack pays out from its own balance, in the currency it collected.

@@ -1,29 +1,22 @@
 // POST /create-gift — records the gift ("Burden shared" on the timeline) and
 // returns the provider's hosted checkout URL for the donor to pay on.
 
-import { parseGiftInput } from '../_shared/gift-input.ts';
+import { intake } from '../_shared/intake.ts';
 import { createCheckout, ProviderError } from '../_shared/providers.ts';
-import {
-  ALLOWED_RETURN_PREFIXES, charge, db, functionUrl, insertGift, isTestKey, json, LIVE_ALLOWED, preflight, secrets,
-} from '../_shared/server.ts';
+import { db, functionUrl, insertGift, json, preflight, secrets } from '../_shared/server.ts';
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
   if (pre) return pre;
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
 
-  const parsed = parseGiftInput(await req.json().catch(() => null), charge, ALLOWED_RETURN_PREFIXES);
-  if (!parsed.ok) return json({ error: parsed.error }, 400);
-  const input = parsed.value;
-
-  const testMode = isTestKey(input.provider);
-  if (!testMode && !LIVE_ALLOWED) {
-    return json({ error: 'Live payments are not switched on yet.' }, 503);
-  }
+  const prepared = await intake(await req.json().catch(() => null));
+  if (!prepared.ok) return json({ error: prepared.error }, prepared.status);
+  const { input, testMode } = prepared;
 
   let created;
   try {
-    created = await insertGift(input, testMode);
+    created = await insertGift(input, testMode, prepared.extra, prepared.giftAid);
   } catch (e) {
     console.error('create_gift failed', e);
     return json({ error: 'Could not record your gift. Please try again.' }, 500);

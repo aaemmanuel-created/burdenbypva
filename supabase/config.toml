@@ -56,3 +56,16 @@ verify_jwt = false
 
 [functions.moderation-queue]
 verify_jwt = false
+
+# Added 2026-10-24: refunds, sanctions screening, Gift Aid export.
+[functions.request-refund]
+verify_jwt = false
+
+[functions.sanctions-refresh]
+verify_jwt = false
+
+[functions.screening-queue]
+verify_jwt = false
+
+[functions.gift-aid-export]
+verify_jwt = false

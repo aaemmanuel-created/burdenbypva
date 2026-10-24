@@ -7,6 +7,7 @@ import { randomToken, sha256Hex, timingSafeEqual } from './crypto.ts';
 import { type GiftRow, type Secrets, type Verification, verify } from './providers.ts';
 import { activatePlan, createPlan } from './plans.ts';
 import { reviewSupportMessage } from './support.ts';
+import { sendReceipt } from './duties.ts';
 
 const env = (name: string) => Deno.env.get(name) ?? undefined;
 
@@ -86,12 +87,17 @@ export type FullGift = GiftRow & {
   plan_id?: string | null;
   momo_phone?: string | null;
   momo_network?: string | null;
+  receipt_sent_at?: string | null;
+  sms_sent_at?: string | null;
   [key: string]: unknown;
 };
 
 // Record a new gift (and, for a monthly gift, its plan). Shared by
 // create-gift (hosted checkout) and momo-charge (approve on your phone).
-export async function insertGift(input: GiftInput, testMode: boolean, extra: Record<string, unknown> = {}) {
+export async function insertGift(
+  input: GiftInput, testMode: boolean, extra: Record<string, unknown> = {},
+  giftAid: Record<string, unknown> | null = null,
+) {
   const token = randomToken();
   const { data: id, error } = await db.rpc('create_gift', {
     p_gift: { ...input, access_token_hash: await sha256Hex(token), test_mode: testMode },
@@ -103,6 +109,10 @@ export async function insertGift(input: GiftInput, testMode: boolean, extra: Rec
       gift_id: id, campaign_id: input.campaign_id, message: input.message,
       display_name: input.anonymous ? 'Anonymous' : (input.donor_name ?? 'Anonymous'),
     });
+  }
+  if (giftAid) {
+    await db.from('gift_aid_declarations').insert({ gift_id: id, ...giftAid });
+    await db.from('gifts').update({ gift_aid: true }).eq('id', id);
   }
   const plan = input.recurring ? await createPlan(input, id as string) : null;
   return { gift: (await loadGift(id as string))!, token, plan };
@@ -140,7 +150,9 @@ export async function applyVerification(gift: FullGift, v: Verification, source:
     const holdUntil = new Date(Date.now() + HOLD_HOURS * 3600_000).toISOString();
     let note = `${money(gift.charge_amount_minor, gift.charge_currency)} charged`;
     if (gift.charge_currency !== 'USD') {
-      note += ` at 1 USD = ${gift.fx_rate} ${gift.charge_currency}${gift.test_mode ? ' (test rate)' : ''}`;
+      // The rate and where it came from (duties.ts chargeNow) — passed through, no margin.
+      const source = (gift.fx_source as string | null) ?? (gift.test_mode ? 'test rate' : null);
+      note += ` at 1 USD = ${gift.fx_rate} ${gift.charge_currency}${source ? ` (${source})` : ''}`;
     }
     if (gift.test_mode) note += ' · Test payment, no real money';
     const moved = await transition(gift.id, 'held', note + '.', source, {
@@ -150,6 +162,8 @@ export async function applyVerification(gift: FullGift, v: Verification, source:
     if (moved && gift.plan_id) await activatePlan(gift, v);
     // Only givers' words are published, and only after the review queue.
     if (moved) await reviewSupportMessage(gift.id);
+    // One receipt per gift: email, or SMS for USSD givers.
+    if (moved) await sendReceipt((await loadGift(gift.id))!);
   } else if (v.outcome === 'failed') {
     await transition(gift.id, 'failed', v.reason, source);
   } else if (v.outcome === 'cancelled') {

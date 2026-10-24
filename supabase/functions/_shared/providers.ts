@@ -375,3 +375,40 @@ export async function paystackTransfer(
   });
   return { status: String(json.data.status), transferCode: String(json.data.transfer_code) };
 }
+
+// ── Refunds (request-refund, within 7 days) ─────────────────────────────
+
+// Returns the provider's refund reference. Stripe monthly-subscription
+// months are refunded by hand from the Stripe dashboard for now.
+export async function refundPayment(
+  gift: GiftRow & { recurring?: boolean }, secrets: Secrets,
+): Promise<string> {
+  if (!gift.provider_ref) throw new ProviderError('This gift has no payment to refund.');
+  if (gift.provider === 'stripe') {
+    if (!gift.provider_ref.startsWith('cs_')) {
+      throw new ProviderError('This monthly card gift is refunded by the BURDEN team. Please contact BURDEN.');
+    }
+    const session = await stripeFetch(secrets, `/checkout/sessions/${encodeURIComponent(gift.provider_ref)}`);
+    if (!session.payment_intent) {
+      throw new ProviderError('This monthly card gift is refunded by the BURDEN team. Please contact BURDEN.');
+    }
+    const refund = await stripeFetch(secrets, '/refunds', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': `refund-${gift.id}` },
+      body: stripeForm({ payment_intent: String(session.payment_intent), 'metadata[gift_id]': gift.id }),
+    });
+    return String(refund.id);
+  }
+  if (gift.provider === 'paystack') {
+    const json = await paystackFetch(secrets, '/refund', {
+      method: 'POST',
+      body: JSON.stringify({ transaction: gift.provider_ref, merchant_note: `BURDEN refund ${gift.id}` }),
+    });
+    return String(json.data?.id ?? json.data?.transaction?.id ?? 'paystack-refund');
+  }
+  const json = await flutterwaveFetch(secrets, `/transactions/${encodeURIComponent(gift.provider_ref)}/refund`, {
+    method: 'POST',
+    body: JSON.stringify({ comments: `BURDEN refund ${gift.id}` }),
+  });
+  return String(json.data?.id ?? 'flutterwave-refund');
+}

@@ -112,7 +112,9 @@ export function parseGiftInput(body: unknown, charge: ChargeConfig, allowedRetur
       fx_rate: rate,
       recurring: b.recurring === true,
       anonymous,
-      donor_name: anonymous ? null : name,
+      // Kept privately even for anonymous gifts (receipts, sanctions screening);
+      // anonymity hides it from the church and other givers.
+      donor_name: name,
       donor_email: email,
       provider,
       return_url: returnUrl,

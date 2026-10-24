@@ -6,12 +6,10 @@
 //   paid    — already went through
 // The gift's timeline then moves exactly like a hosted-checkout gift.
 
-import { parseGiftInput } from '../_shared/gift-input.ts';
+import { intake } from '../_shared/intake.ts';
 import { chargeMomo, MOMO_NETWORKS, type MomoNetwork, normaliseGhanaPhone } from '../_shared/momo.ts';
 import { ProviderError } from '../_shared/providers.ts';
-import {
-  ALLOWED_RETURN_PREFIXES, charge, db, insertGift, isTestKey, json, LIVE_ALLOWED, preflight, secrets, verifyAndApply,
-} from '../_shared/server.ts';
+import { db, insertGift, json, preflight, secrets, verifyAndApply } from '../_shared/server.ts';
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -19,21 +17,19 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
 
   const body = await req.json().catch(() => null);
-  const parsed = parseGiftInput({ ...(body ?? {}), provider: 'paystack' }, charge, ALLOWED_RETURN_PREFIXES);
-  if (!parsed.ok) return json({ error: parsed.error }, 400);
   const phone = normaliseGhanaPhone(body?.phone);
   if (!phone) return json({ error: 'Enter your mobile money number, e.g. 024 123 4567.' }, 400);
   const network = body?.network as MomoNetwork;
   if (!MOMO_NETWORKS.includes(network)) return json({ error: 'Choose your mobile money network.' }, 400);
-
-  const testMode = isTestKey('paystack');
-  if (!testMode && !LIVE_ALLOWED) return json({ error: 'Live payments are not switched on yet.' }, 503);
+  const prepared = await intake(body, 'paystack');
+  if (!prepared.ok) return json({ error: prepared.error }, prepared.status);
+  const { input, testMode } = prepared;
 
   let created;
   try {
-    created = await insertGift(parsed.value, testMode, {
-      momo_phone: phone, momo_network: network, payment_method: 'mobile_money',
-    });
+    created = await insertGift(input, testMode, {
+      ...prepared.extra, momo_phone: phone, momo_network: network, payment_method: 'mobile_money',
+    }, prepared.giftAid);
   } catch (e) {
     console.error('momo gift not recorded', e);
     return json({ error: 'Could not record your gift. Please try again.' }, 500);

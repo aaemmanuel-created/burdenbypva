@@ -10,6 +10,7 @@ import { timingSafeEqual } from '../_shared/crypto.ts';
 import { momoCode, MOMO_NETWORKS, type MomoNetwork, normaliseGhanaPhone } from '../_shared/momo.ts';
 import { payoutLabel } from '../_shared/payout-logic.ts';
 import { createPaystackRecipient } from '../_shared/providers.ts';
+import { screenName } from '../_shared/duties.ts';
 import { db, json, preflight, secrets } from '../_shared/server.ts';
 
 Deno.serve(async (req) => {
@@ -48,14 +49,19 @@ Deno.serve(async (req) => {
     const recipient = await createPaystackRecipient(secrets, {
       type: b.method === 'momo' ? 'mobile_money' : 'ghipss', name, accountNumber, bankCode, currency,
     });
+    // Screen the account holder's name; a possible match waits for a reviewer
+    // (screening-queue) instead of being marked verified.
+    const screening = await screenName(name, 'payout_account', churchId, true);
+    if (screening === 'blocked') return json({ error: 'This account cannot be registered. See the screening queue.' }, 403);
+    const verified = b.verified === true && screening === 'clear';
     const { error } = await db.from('church_payout_accounts').upsert({
       church_id: churchId, method: b.method, network, account_name: name, account_number: accountNumber,
       currency, paystack_recipient: recipient,
-      verified_at: b.verified === true ? new Date().toISOString() : null,
+      verified_at: verified ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     });
     if (error) throw error;
-    return json({ ok: true, payoutTo: payoutLabel({ method: b.method, network, account_number: accountNumber }) });
+    return json({ ok: true, screening, verified, payoutTo: payoutLabel({ method: b.method, network, account_number: accountNumber }) });
   } catch (e) {
     console.error('payout account failed', e);
     return json({ error: 'Could not register this account with Paystack. Check the details.' }, 502);
