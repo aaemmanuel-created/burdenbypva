@@ -3,7 +3,7 @@ import { colors, font, type } from '../theme.js'
 import { Button, Label, formatMoney } from '../components/UI.jsx'
 import Timeline from '../components/Timeline.jsx'
 import { campaigns } from '../data/mock.js'
-import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout } from '../lib/payments.js'
+import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout, requestRefund } from '../lib/payments.js'
 
 // One gift and where it has got to. Live gifts refresh from the server —
 // every few seconds while the payment is still being confirmed, once
@@ -94,6 +94,8 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
         )}
       </section>
 
+      <Refund gift={gift} live={live} updateGift={updateGift} />
+
       {gift.message && !declined && (
         <section style={{ marginTop: 48 }}>
           <Label style={{ marginBottom: 16 }}>Your words of support</Label>
@@ -124,6 +126,47 @@ export default function GiftDetail({ gift, navigate, updateGift }) {
         <Button variant="ghost" onClick={() => navigate({ name: 'discover' })}>Back to Discover</Button>
       </div>
     </main>
+  )
+}
+
+// The 7-day refund promised on the timeline (supabase request-refund).
+const REFUND_DAYS = 7
+function Refund({ gift, live, updateGift }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const age = (Date.now() - new Date(gift.timestamp).getTime()) / 86_400_000
+  if (!['held', 'paid_out'].includes(gift.status) || age > REFUND_DAYS || gift.fromCredit) return null
+  const daysLeft = Math.max(1, Math.ceil(REFUND_DAYS - age))
+  async function ask() {
+    if (!window.confirm(`Refund ${formatMoney(gift.total)} in full? This cannot be undone.`)) return
+    setBusy(true); setError('')
+    try {
+      if (live) await requestRefund(gift.id, gift.token)
+      const at = new Date().toISOString()
+      updateGift(gift.id, {
+        status: 'refunded',
+        events: [...(gift.events || []), {
+          step: 'refunded', occurred_at: at,
+          note: live ? 'Refund requested — it can take 5–10 working days to arrive.' : 'Refunded — demo, no money moved.',
+        }],
+      })
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <section style={{ marginTop: 48 }}>
+      <Label style={{ marginBottom: 16 }}>Changed your mind?</Label>
+      <p style={{ fontSize: type.sm.fontSize, lineHeight: 1.7, color: colors.inkSoft }}>
+        You can ask for a full refund for {daysLeft} more day{daysLeft === 1 ? '' : 's'}. It goes back the way you paid.
+      </p>
+      {error && <p role="alert" style={{ fontSize: type.sm.fontSize, color: colors.fundLow, marginTop: 12 }}>{error}</p>}
+      <div style={{ marginTop: 16 }}>
+        <Button variant="ghost" onClick={ask} disabled={busy}>{busy ? 'Asking…' : 'Ask for a refund'}</Button>
+      </div>
+    </section>
   )
 }
 

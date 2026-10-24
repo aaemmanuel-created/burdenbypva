@@ -45,7 +45,7 @@ export type Campaign = {
 
 export type TeamMember = { role: string; name: string; photo?: ImageSourcePropType };
 
-export type GiftStatus = 'initiated' | 'held' | 'paid_out' | 'church_confirmed' | 'failed' | 'cancelled';
+export type GiftStatus = 'initiated' | 'held' | 'paid_out' | 'church_confirmed' | 'failed' | 'cancelled' | 'refunded';
 
 export type GiftEvent = { step: string; occurred_at: string; note?: string | null };
 
@@ -84,6 +84,8 @@ export type Gift = {
   payoutTo?: string;
   // Where the giver's words of support are in the review queue (live gifts).
   supportStatus?: string | null;
+  // Declared for Gift Aid as a UK taxpayer.
+  giftAid?: boolean;
   // Monthly gifts: the plan and the donor's private key to stop it.
   planId?: string;
   planToken?: string;

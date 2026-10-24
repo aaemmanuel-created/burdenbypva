@@ -31,6 +31,10 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
   const [custom, setCustom] = useState('')
   const [recurring, setRecurring] = useState(false)
   const [anonymous, setAnonymous] = useState(false)
+  // Gift Aid (UK taxpayers): the HMRC declaration needs a home address line and postcode.
+  const [giftAid, setGiftAid] = useState(false)
+  const [house, setHouse] = useState('')
+  const [postcode, setPostcode] = useState('')
   const [coverFee, setCoverFee] = useState(true)
   const [useCredit, setUseCredit] = useState(false)
   const [name, setName] = useState(profile?.name || '')
@@ -69,9 +73,17 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
     // shown on the burden page under Words of support, never with the amount
     message: message.trim() || undefined,
     donorName: anonymous ? undefined : name.trim(),
+    giftAid: giftAid || undefined,
     fundraiserId: fundraiser?.id,
     fundraiserName: fundraiser?.name,
     payoutTo: church.payoutTo,
+  }
+
+  // The HMRC declaration fields, from the full name and address given.
+  function giftAidPayload() {
+    if (!giftAid) return undefined
+    const parts = name.trim().split(/\s+/)
+    return { firstName: parts[0], lastName: parts.slice(1).join(' ') || parts[0], house: house.trim(), postcode: postcode.trim() }
   }
 
   async function handleSubmit(e) {
@@ -90,6 +102,7 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
         try {
           const res = await startMomoCharge({
             ...details, churchId: church.id, coverFee, name, email, returnUrl: returnUrl(), phone: momoPhone, network,
+            giftAid: giftAidPayload(),
           })
           const gift = {
             ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider: 'paystack',
@@ -126,6 +139,7 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
       try {
         const res = await startCheckout({
           ...details, churchId: church.id, provider, coverFee, name, email, returnUrl: returnUrl(),
+          giftAid: giftAidPayload(),
         })
         recordGift({
           ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider,
@@ -376,16 +390,14 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
         {/* Donor info — email is needed even for anonymous gifts (receipt). */}
         <div style={{ marginBottom: 36 }}>
           <Label style={{ marginBottom: 14 }}>Your details</Label>
-          {!anonymous && (
-            <input
-              type="text"
-              placeholder="Full name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-              style={{ ...inputStyle, marginBottom: 8 }}
-            />
-          )}
+          <input
+            type="text"
+            placeholder="Full name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+            style={{ ...inputStyle, marginBottom: 8 }}
+          />
           <input
             type="email"
             placeholder="Email for receipt"
@@ -394,6 +406,19 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
             required
             style={inputStyle}
           />
+          <p style={{ marginTop: 8, fontSize: 11, color: colors.inkMuted, lineHeight: 1.5 }}>
+            Your name goes on your receipt and is checked against sanctions lists, as the law requires.
+            {anonymous && ' Because you give anonymously, the church and other givers will not see it.'}
+          </p>
+          <Toggle checked={giftAid} onChange={setGiftAid}
+            label="Add Gift Aid (UK taxpayers only)"
+            help={GIFT_AID_HELP} />
+          {giftAid && (
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8, marginTop: 12 }}>
+              <input placeholder="House name or number" value={house} onChange={e => setHouse(e.target.value)} style={inputStyle} />
+              <input placeholder="Postcode" value={postcode} onChange={e => setPostcode(e.target.value)} style={inputStyle} />
+            </div>
+          )}
         </div>
 
         {/* Words of support — optional, shown without the amount */}
@@ -429,7 +454,8 @@ export default function Give({ id, navigate, recordGift, profile, fundraisers = 
           <p role="alert" style={{ marginBottom: 16, fontSize: 13, color: colors.fundLow }}>{error}</p>
         )}
 
-        <Button type="submit" full disabled={busy || value < 1 || !email || (!anonymous && !name) || (useCredit && value > credit)
+        <Button type="submit" full disabled={busy || value < 1 || !email || !name.trim() || (useCredit && value > credit)
+          || (giftAid && (!house.trim() || !UK_POSTCODE.test(postcode.trim())))
           || (usingMomo && !creditCovers && !momoPhone)}>
           {busy ? (usingMomo ? 'Sending the prompt…' : 'Opening secure checkout…')
             : creditCovers ? `Give ${formatMoney(value)} from credit`
@@ -514,6 +540,11 @@ function MomoWaiting({ waiting, phone, network, otp, setOtp, onOtp, error, onDon
     </main>
   )
 }
+
+const UK_POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i
+
+// HMRC's declaration wording, said plainly (supabase duties-logic.ts GIFT_AID_WORDING).
+const GIFT_AID_HELP = "I want to Gift Aid this donation. I am a UK taxpayer and understand that if I pay less Income Tax and/or Capital Gains Tax than the amount of Gift Aid claimed on all my donations in that tax year it is my responsibility to pay any difference. (BURDEN can claim the extra 25% once it is registered with HMRC.)"
 
 const inputStyle = {
   width: '100%',

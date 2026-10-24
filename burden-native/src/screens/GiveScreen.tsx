@@ -37,6 +37,10 @@ export default function GiveScreen({ route, navigation }: Props) {
   const [custom, setCustom] = useState<string>('');
   const [recurring, setRecurring] = useState<boolean>(false);
   const [anonymous, setAnonymous] = useState<boolean>(false);
+  // Gift Aid (UK taxpayers): the HMRC declaration needs a home address line and postcode.
+  const [giftAid, setGiftAid] = useState(false);
+  const [house, setHouse] = useState('');
+  const [postcode, setPostcode] = useState('');
   const [coverFee, setCoverFee] = useState<boolean>(true);
   const [useCredit, setUseCredit] = useState<boolean>(false);
   const [name, setName] = useState<string>('');
@@ -60,8 +64,16 @@ export default function GiveScreen({ route, navigation }: Props) {
   const usingMomo = provider === 'paystack' && momoDirect;
   const momoPhone = normaliseGhanaPhone(phone);
   // Email is needed even for anonymous gifts (receipt).
-  const canSubmit = !busy && value >= 1 && email.length > 0 && (anonymous || name.length > 0) && !(useCredit && value > credit)
+  const canSubmit = !busy && value >= 1 && email.length > 0 && name.trim().length > 0 && !(useCredit && value > credit)
+    && !(giftAid && (!house.trim() || !UK_POSTCODE.test(postcode.trim())))
     && !(usingMomo && !creditCovers && !momoPhone);
+
+  // The HMRC declaration fields, from the full name and address given.
+  function giftAidPayload() {
+    if (!giftAid) return undefined;
+    const parts = name.trim().split(/\s+/);
+    return { firstName: parts[0], lastName: parts.slice(1).join(' ') || parts[0], house: house.trim(), postcode: postcode.trim() };
+  }
 
   async function submit() {
     if (!canSubmit || !campaign || !church) return;
@@ -81,6 +93,7 @@ export default function GiveScreen({ route, navigation }: Props) {
       // shown on the burden page under Words of support, never with the amount
       message: message.trim() || undefined,
       donorName: anonymous ? undefined : name.trim(),
+      giftAid: giftAid || undefined,
       fundraiserId: fundraiser?.id,
       fundraiserName: fundraiser?.name,
       payoutTo: church.payoutTo,
@@ -95,6 +108,7 @@ export default function GiveScreen({ route, navigation }: Props) {
         try {
           const res = await startMomoCharge({
             ...details, churchId: church.id, coverFee, name, email, phone: momoPhone, network,
+            giftAid: giftAidPayload(),
           });
           const gift: Gift = {
             ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider: 'paystack',
@@ -128,7 +142,7 @@ export default function GiveScreen({ route, navigation }: Props) {
       setBusy(true);
       try {
         const res = await startCheckout({
-          ...details, churchId: church.id, provider, coverFee, name, email,
+          ...details, churchId: church.id, provider, coverFee, name, email, giftAid: giftAidPayload(),
         });
         recordGift({
           ...details, id: res.giftId, token: res.token, live: true, testMode: res.testMode, provider,
@@ -325,15 +339,13 @@ export default function GiveScreen({ route, navigation }: Props) {
 
       <View style={{ marginTop: 24 }}>
         <Label style={{ marginBottom: 12 }}>Your details</Label>
-        {!anonymous && (
-          <TextInput
-            placeholder="Full name"
-            placeholderTextColor={colors.inkMuted}
-            value={name}
-            onChangeText={setName}
-            style={[styles.input, { marginBottom: 8 }]}
-          />
-        )}
+        <TextInput
+          placeholder="Full name"
+          placeholderTextColor={colors.inkMuted}
+          value={name}
+          onChangeText={setName}
+          style={[styles.input, { marginBottom: 8 }]}
+        />
         <TextInput
           placeholder="Email for receipt"
           placeholderTextColor={colors.inkMuted}
@@ -343,6 +355,19 @@ export default function GiveScreen({ route, navigation }: Props) {
           onChangeText={setEmail}
           style={styles.input}
         />
+        <Text style={[styles.toggleHelp, { marginTop: 8 }]}>
+          Your name goes on your receipt and is checked against sanctions lists, as the law requires.
+          {anonymous ? ' Because you give anonymously, the church and other givers will not see it.' : ''}
+        </Text>
+        <Toggle checked={giftAid} onChange={setGiftAid} label="Add Gift Aid (UK taxpayers only)" help={GIFT_AID_HELP} />
+        {giftAid && (
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+            <TextInput placeholder="House name or number" placeholderTextColor={colors.inkMuted} value={house}
+              onChangeText={setHouse} style={[styles.input, { flex: 2 }]} />
+            <TextInput placeholder="Postcode" placeholderTextColor={colors.inkMuted} autoCapitalize="characters"
+              value={postcode} onChangeText={setPostcode} style={[styles.input, { flex: 1 }]} />
+          </View>
+        )}
       </View>
 
       {/* Words of support — optional, shown without the amount */}
@@ -393,6 +418,11 @@ export default function GiveScreen({ route, navigation }: Props) {
     </ScrollView>
   );
 }
+
+const UK_POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+
+// HMRC's declaration wording, said plainly (supabase duties-logic.ts GIFT_AID_WORDING).
+const GIFT_AID_HELP = 'I want to Gift Aid this donation. I am a UK taxpayer and understand that if I pay less Income Tax and/or Capital Gains Tax than the amount of Gift Aid claimed on all my donations in that tax year it is my responsibility to pay any difference. (BURDEN can claim the extra 25% once it is registered with HMRC.)';
 
 // What "monthly" means for the chosen way of paying (see supabase plan-logic.ts).
 function monthlyHelp(provider: ProviderId, usingMomo: boolean): string {

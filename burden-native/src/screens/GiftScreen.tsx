@@ -2,14 +2,14 @@
 // burden-app/src/screens/GiftDetail.jsx. Also the landing screen for the
 // burden://gift?gift=<id>&t=<token> link the payment server opens after checkout.
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { Button, Label } from '../components/UI';
 import Timeline from '../components/Timeline';
 import { colors, font, formatMoney } from '../constants/theme';
 import { useGifts } from '../context/GiftsContext';
-import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout } from '../lib/payments';
+import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout, requestRefund } from '../lib/payments';
 import { settleDemoGift } from '../lib/giftTimeline';
 import { campaigns, churches, type Gift, type GiftStatus } from '../data/mock';
 import { ShareSheet } from '../components/Community';
@@ -108,6 +108,8 @@ export default function GiftScreen({ route, navigation }: Props) {
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      <Refund gift={gift} live={live} />
+
       {gift.message && !declined ? (
         <View style={{ marginTop: 32 }}>
           <Label style={{ marginBottom: 12 }}>Your words of support</Label>
@@ -144,6 +146,51 @@ export default function GiftScreen({ route, navigation }: Props) {
         />
       )}
     </ScrollView>
+  );
+}
+
+// The 7-day refund promised on the timeline (supabase request-refund).
+const REFUND_DAYS = 7;
+function Refund({ gift, live }: { gift: Gift; live: boolean }) {
+  const { updateGift } = useGifts();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const age = (Date.now() - new Date(gift.timestamp).getTime()) / 86_400_000;
+  if (!['held', 'paid_out'].includes(gift.status) || age > REFUND_DAYS || gift.fromCredit) return null;
+  const daysLeft = Math.max(1, Math.ceil(REFUND_DAYS - age));
+  async function refund() {
+    setBusy(true); setError('');
+    try {
+      if (live) await requestRefund(gift.id, gift.token!);
+      const at = new Date().toISOString();
+      updateGift(gift.id, {
+        status: 'refunded',
+        events: [...(gift.events || []), {
+          step: 'refunded', occurred_at: at,
+          note: live ? 'Refund requested — it can take 5–10 working days to arrive.' : 'Refunded — demo, no money moved.',
+        }],
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const ask = () => Alert.alert('Ask for a refund?', `${formatMoney(gift.total)} goes back the way you paid. This cannot be undone.`, [
+    { text: 'Keep my gift', style: 'cancel' },
+    { text: 'Refund', style: 'destructive', onPress: refund },
+  ]);
+  return (
+    <View style={{ marginTop: 32 }}>
+      <Label style={{ marginBottom: 12 }}>Changed your mind?</Label>
+      <Text style={styles.body}>
+        You can ask for a full refund for {daysLeft} more day{daysLeft === 1 ? '' : 's'}. It goes back the way you paid.
+      </Text>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Button variant="ghost" style={{ marginTop: 14 }} onPress={ask} disabled={busy}>
+        {busy ? 'Asking…' : 'Ask for a refund'}
+      </Button>
+    </View>
   );
 }
 

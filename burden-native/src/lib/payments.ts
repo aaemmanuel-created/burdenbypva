@@ -91,6 +91,11 @@ export type MomoNetworkId = (typeof MOMO_NETWORKS)[number]['id'];
 // The USSD short code, once BURDEN rents one (e.g. "*713*55#"). Unset: not shown.
 export const USSD_CODE = process.env.EXPO_PUBLIC_BURDEN_USSD_CODE ?? '';
 
+// The 7-day refund.
+export function requestRefund(id: string, token: string) {
+  return call<{ ok: true }>('request-refund', { method: 'POST', body: JSON.stringify({ gift: id, t: token }) });
+}
+
 // Approved words of support for one burden (the review queue's public end).
 export function fetchSupportWords(campaignId: string) {
   return call<{ words: { name: string; message: string; date: string }[] }>(

@@ -128,12 +128,40 @@ _Studied from MTN MoMo and expressPay with REA. Test mode only, like everything 
 
 **Not built — diaspora remittance (MoMo Remittances API).** MTN only opens that product to licensed money-transfer operators, and BURDEN collects gifts for churches, not person-to-person transfers. Diaspora donors are already covered: they give by card (Stripe) and the church is paid locally (MoMo or bank) after the hold. Revisit only if BURDEN partners with a licensed remittance company.
 
+## Review queue and money duties (added 2026-10-24)
+
+**Words of support — automated review queue.** Each message is stored with its gift and checked once the payment is confirmed:
+1. **Free rules** (`_shared/moderation-logic.ts`): requests for money, wallet numbers, crypto and "investments" are **rejected**; links, emails, phone numbers, "WhatsApp me", urgency or "God will repay your giving" language, insults and shouting are **held**.
+2. **Claude** (`_shared/moderation.ts`) reads whatever the rules let through and answers approve / hold / reject. The stricter of the two answers wins.
+3. **Fails closed:** if Claude can't be reached, declines, or no key is set, the message is **held** for a person. Nothing unchecked is ever shown.
+Only approved words are public (`support-messages`). A reviewer clears held ones with `moderation-queue` (GET to list, POST `{ "id": 12, "decision": "approve" }`, header `x-burden-admin-key`). The giver sees their own words as "waiting" until then.
+
+**Receipts.** A numbered receipt is emailed when the payment is confirmed (Postmark). USSD givers, who have no email, get an SMS instead (Africa's Talking).
+**Refunds.** "Ask for a refund" on the gift page for 7 days (`request-refund`). Stripe one-off gifts, Paystack and Flutterwave refund automatically; a Stripe monthly-subscription month is refunded by hand from the Stripe dashboard.
+**Gift Aid.** UK givers can add the HMRC declaration (name, house, postcode). `gift-aid-export` gives a Charities Online CSV. Only gifts charged in pounds can be claimed, and only once BURDEN is registered with HMRC as a charity.
+**Sanctions screening.** The US OFAC list and the UK list are reloaded daily (`sanctions-refresh`). Every named giver is screened before paying, and every church payout account when it is registered. An exact match is refused politely; a close match goes ahead but its payout waits in `screening-queue` for a person. In live mode, if the lists have never loaded, every gift waits for review. (The blueprint's paid service, ComplyAdvantage, is still the long-term recommendation; this covers the free public lists.)
+**Exchange rates.** USD → GHS (and others) come from a public source (`open.er-api.com` by default), are cached for 12 hours and passed through with no margin. Live payments refuse to run on an older rate; test mode falls back to the fixed test rate.
+
+**Extra setup steps**
+1. Deploy: `supabase db push` then `supabase functions deploy` (two new migrations, eight new functions).
+2. Secrets (all optional in test mode — each feature says what is missing in the logs and carries on):
+   ```bash
+   supabase secrets set ANTHROPIC_API_KEY=<key> POSTMARK_SERVER_TOKEN=<token> RECEIPT_FROM="BURDEN <receipts@your-domain>"
+   ```
+   ```bash
+   supabase secrets set AT_USERNAME=<Africa's Talking username, or sandbox> AT_API_KEY=<key> SMS_SENDER_ID=<approved sender id>
+   ```
+   Optional: `MODERATION_MODEL` (default `claude-opus-5-5`; e.g. `claude-haiku-5-5` for lower cost), `FX_SOURCE_URL`, `OFAC_SDN_URL`, `UK_SANCTIONS_URL`.
+3. Add a third daily cron job: `POST …/functions/v1/sanctions-refresh` with `x-burden-cron: <CRON_SECRET>`, and run it once by hand before the first gift.
+4. Check `UK_SANCTIONS_URL` still serves the UK consolidated list CSV — the UK has been moving it to the FCDO's UK Sanctions List.
+5. Postmark: verify the sending domain (SPF/DKIM) so receipts aren't treated as spam.
+
 ## Go-live checklist (NOT done — needed before real money)
 
 1. **Legal entity.** BURDEN must be a registered company or charity that can open live provider accounts. The blueprint recommends a UK CIO (charity), which also unlocks Gift Aid and Apple's charity rule. Get counsel review first (blueprint §15).
 2. **Provider approval (KYB)** for each live account. Each provider will ask what BURDEN is, because collecting money *on behalf of churches* is a marketplace model.
 3. **Real payouts to churches.** Paystack gifts can now be paid to a church's verified MoMo wallet or bank (`run-payouts`, behind `PAYOUTS_LIVE=true`). Stripe and Flutterwave gifts still need Stripe Connect / Flutterwave transfers and church onboarding.
-4. **Refunds** (7-day self-serve window), **SMS receipts for USSD gifts**, **emailed receipts / tax receipts**, **sanctions screening**, and a **live FX rate source** (test mode uses fixed rates).
+4. **Done in code, still to switch on:** receipts (Postmark), SMS receipts (Africa's Talking), 7-day refunds, Gift Aid declarations, sanctions screening and live exchange rates (see "Review queue and money duties"). **Still missing:** an annual tax statement per donor (needs donor accounts) and a paid screening service.
 5. **Apple App Store.** Guideline 3.2.1(vi) lets approved charities take donations outside in-app purchase. The native app already sends donors to the provider's web page, which matches the blueprint's plan.
 6. **Donor accounts.** Gifts are currently remembered per device (web: browser storage; native: until the app closes). Logging in would let donors see their gifts on any device.
 7. Only then: set `PAYMENTS_LIVE=true` on the server. Until that's set, the server refuses any live key, even if one is entered by mistake.
