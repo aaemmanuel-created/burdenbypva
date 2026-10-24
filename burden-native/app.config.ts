@@ -44,6 +44,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   plugins: [
     'expo-font',
+    'expo-notifications',
     [
       '@sentry/react-native/expo',
       {

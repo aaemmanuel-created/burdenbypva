@@ -12,6 +12,7 @@ import { useGifts } from '../context/GiftsContext';
 import { PAYMENT_METHODS, cancelMonthlyGift, fetchGiftStatus, liveCheckout, requestRefund } from '../lib/payments';
 import { settleDemoGift } from '../lib/giftTimeline';
 import { campaigns, churches, type Gift, type GiftStatus } from '../data/mock';
+import { registerForPush } from '../lib/push';
 import { ShareSheet } from '../components/Community';
 import { findFundraiser } from '../lib/community';
 import type { RootStackParamList } from '../navigation/types';
@@ -43,6 +44,9 @@ export default function GiftScreen({ route, navigation }: Props) {
 
   const token = stored?.token ?? returnToken;
   const live = Boolean(stored?.live && liveCheckout && token);
+
+  // After a live gift: ask once to send this phone the gift's news.
+  useEffect(() => { if (live) registerForPush(gifts); }, [live]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!live || !token) return;

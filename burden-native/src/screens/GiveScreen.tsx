@@ -39,6 +39,7 @@ export default function GiveScreen({ route, navigation }: Props) {
   const [anonymous, setAnonymous] = useState<boolean>(false);
   // Gift Aid (UK taxpayers): the HMRC declaration needs a home address line and postcode.
   const [giftAid, setGiftAid] = useState(false);
+  const [notifyUpdates, setNotifyUpdates] = useState(false); // opt-in: emails when the church posts an update
   const [house, setHouse] = useState('');
   const [postcode, setPostcode] = useState('');
   const [coverFee, setCoverFee] = useState<boolean>(true);
@@ -94,6 +95,7 @@ export default function GiveScreen({ route, navigation }: Props) {
       message: message.trim() || undefined,
       donorName: anonymous ? undefined : name.trim(),
       giftAid: giftAid || undefined,
+      notifyUpdates,
       fundraiserId: fundraiser?.id,
       fundraiserName: fundraiser?.name,
       payoutTo: church.payoutTo,
@@ -362,6 +364,12 @@ export default function GiveScreen({ route, navigation }: Props) {
           Your name goes on your receipt and is checked against sanctions lists, as the law requires.
           {anonymous ? ' Because you give anonymously, the church and other givers will not see it.' : ''}
         </Text>
+        <Toggle
+          checked={notifyUpdates}
+          onChange={setNotifyUpdates}
+          label="Email me when the church posts an update"
+          help="A short note when there is news about this burden. Every email has a one-click unsubscribe. You will hear about your own gift (paid to the church, confirmed) either way."
+        />
         <Toggle checked={giftAid} onChange={setGiftAid} label="Add Gift Aid (UK taxpayers only)" help={GIFT_AID_HELP} />
         {giftAid && (
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>

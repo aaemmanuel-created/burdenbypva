@@ -5,7 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer, type LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -47,8 +48,21 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
 function App() {
   const [fontsReady, setFontsReady] = useState(false);
+
+  // Tapping a notification opens the gift (or the burden, for an update).
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { giftId?: string; campaignId?: string };
+      if (!navigationRef.isReady()) return;
+      if (data?.giftId) navigationRef.navigate('Gift', { giftId: data.giftId });
+      else if (data?.campaignId) navigationRef.navigate('Campaign', { campaignId: data.campaignId });
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -86,7 +100,7 @@ function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <GiftsProvider>
-          <NavigationContainer linking={linking}>
+          <NavigationContainer ref={navigationRef} linking={linking}>
             <RootNavigator />
             <StatusBar style="dark" />
           </NavigationContainer>
