@@ -11,6 +11,9 @@ import { findFundraiser, fundraisersFor, supportFor, updatesFor, type SupportWor
 import { fetchBurdenUpdates, fetchSupportWords, liveCheckout } from '../lib/payments';
 import type { RootStackParamList } from '../navigation/types';
 import { useT } from '../lib/i18n';
+import { fetchFundraiser, fetchFundraisers } from '../lib/account';
+import { authLive } from '../lib/auth';
+import type { Fundraiser } from '../lib/community';
 
 const ITEMS = [
   { label: 'Direct programme costs', share: 0.84 },
@@ -41,6 +44,18 @@ export default function CampaignScreen({ route, navigation }: Props) {
   }, [route.params.campaignId]);
   const scroll = useRef<ScrollView>(null);
   const { fundraiserId } = route.params;
+  // Everyone's fundraisers on this burden, plus the one a shared link points at.
+  const [publicFundraisers, setPublicFundraisers] = useState<Fundraiser[]>([]);
+  useEffect(() => {
+    let stop = false;
+    Promise.all([
+      fetchFundraisers(route.params.campaignId).catch(() => [] as Fundraiser[]),
+      fundraiserId ? fetchFundraiser(fundraiserId).catch(() => null) : Promise.resolve(null),
+    ]).then(([list, one]) => {
+      if (!stop) setPublicFundraisers(one && !list.some((f) => f.id === one.id) ? [...list, one] : list);
+    });
+    return () => { stop = true; };
+  }, [route.params.campaignId, fundraiserId]);
   const campaign = campaigns.find((c) => c.id === route.params.campaignId);
   if (!campaign) {
     return (
@@ -53,8 +68,11 @@ export default function CampaignScreen({ route, navigation }: Props) {
   const pct = Math.round((campaign.raised / campaign.goal) * 100);
   const updates = liveUpdates ?? updatesFor(campaign.id);
   const words = supportFor(campaign.id, gifts, liveWords);
-  const carrying = fundraisersFor(campaign.id, fundraisers, gifts);
-  const sharedFundraiser = findFundraiser(fundraiserId, fundraisers);
+  const known = [...fundraisers, ...publicFundraisers.filter((p) => !fundraisers.some((f) => f.id === p.id))]
+    .filter((f) => !f.closed || f.id === fundraiserId);
+  // Live totals already count every gift through a fundraiser; the demo adds this phone's.
+  const carrying = fundraisersFor(campaign.id, known, authLive ? [] : gifts);
+  const sharedFundraiser = findFundraiser(fundraiserId, known);
 
   return (
     <ScrollView ref={scroll} style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 96 }}>
@@ -123,7 +141,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
 
       {/* Updates — dated posts from the team */}
       <View style={{ padding: 20 }}>
-        <UpdatesSection updates={updates} />
+        <UpdatesSection updates={updates} campaignId={campaign.id} />
       </View>
 
       {campaign.team && campaign.team.length > 0 && (
@@ -185,7 +203,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
 
       {/* Words of support — from givers, never with the amount */}
       <View style={{ padding: 20 }}>
-        <SupportSection words={words} onGive={() => navigation.navigate('Give', { campaignId: campaign.id })} />
+        <SupportSection words={words} campaignId={campaign.id} onGive={() => navigation.navigate('Give', { campaignId: campaign.id })} />
       </View>
 
       <Rule soft />
@@ -197,6 +215,7 @@ export default function CampaignScreen({ route, navigation }: Props) {
         onLayout={(e) => { if (fundraiserId) scroll.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 120), animated: false }); }}
       >
         <FundraisersSection
+          campaignId={campaign.id}
           fundraisers={carrying}
           highlightId={fundraiserId}
           onGiveThrough={(f) => navigation.navigate('Give', { campaignId: campaign.id, fundraiserId: f.id })}

@@ -6,7 +6,9 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Gift } from '../data/mock';
 import type { Fundraiser } from '../lib/community';
-import { settleDemoGift } from '../lib/giftTimeline';
+import { isGiven, settleDemoGift } from '../lib/giftTimeline';
+import { authLive, currentSession, signOut as endSession, type Session } from '../lib/auth';
+import { claimGifts, deleteAccount, saveDemoAccount, syncAccount } from '../lib/account';
 
 const STORE_KEY = 'burden-native-state-v1';
 
@@ -23,6 +25,12 @@ type GiftsContextValue = {
   // Burdens whose prayer group the donor has joined (web: App.jsx joinedPrayerGroups).
   joinedPrayer: string[];
   togglePrayer: (campaignId: string) => void;
+  // The giver's account (lib/account.ts): signed in, gifts and fundraisers
+  // belong to the person and follow them to every device.
+  account: { email: string } | null;
+  signIn: (s: Session) => Promise<void>;
+  signOut: (opts?: { remove?: boolean }) => Promise<void>;
+  closeOwnFundraiser: (id: string) => void;
 };
 
 const GiftsContext = createContext<GiftsContextValue | null>(null);
@@ -39,6 +47,7 @@ export function GiftsProvider({ children }: { children: React.ReactNode }) {
   // Load what was saved, then save every change. Anything recorded before
   // the load finishes (e.g. a checkout return) is kept alongside it.
   const loaded = useRef(false);
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     AsyncStorage.getItem(STORE_KEY)
       .then((raw) => {
@@ -53,7 +62,7 @@ export function GiftsProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(saved.joinedPrayer)) setJoinedPrayer(saved.joinedPrayer);
       })
       .catch(() => { /* unreadable store — start fresh */ })
-      .finally(() => { loaded.current = true; });
+      .finally(() => { loaded.current = true; setReady(true); });
   }, []);
   useEffect(() => {
     if (!loaded.current) return;
@@ -74,9 +83,44 @@ export function GiftsProvider({ children }: { children: React.ReactNode }) {
   const addFundraiser = useCallback((f: Fundraiser) => {
     setFundraisers((prev) => [f, ...prev]);
   }, []);
+  const closeOwnFundraiser = useCallback((id: string) => {
+    setFundraisers((prev) => prev.map((f) => (f.id === id ? { ...f, closed: true } : f)));
+  }, []);
+
+  // ── The account ── (mirrors burden-app/src/App.jsx)
+  const [account, setAccount] = useState<{ email: string } | null>(null);
+  const latest = useRef({ gifts, fundraisers });
+  latest.current = { gifts, fundraisers };
+  const signIn = useCallback(async (s: Session) => {
+    const acc = await syncAccount(s.email, latest.current.gifts, latest.current.fundraisers);
+    setGifts(acc.gifts.map((g) => settleDemoGift(g)));
+    setFundraisers(acc.fundraisers);
+    setAccount({ email: s.email });
+  }, []);
+  // Signed in last time: sync once the saved state has loaded.
+  useEffect(() => {
+    if (ready) currentSession().then((s) => s && signIn(s)).catch(() => {});
+  }, [ready, signIn]);
+  // Signing out leaves nothing of the account on this phone.
+  const signOut = useCallback(async ({ remove = false }: { remove?: boolean } = {}) => {
+    if (remove && account) await deleteAccount(account.email);
+    await endSession();
+    setAccount(null); setGifts([]); setFundraisers([]);
+  }, [account]);
+  useEffect(() => { if (account) saveDemoAccount(account.email, gifts, fundraisers); }, [account, gifts, fundraisers]);
+  // Live: a gift made while signed in joins the account once it goes through.
+  useEffect(() => {
+    if (!authLive || !account) return;
+    const fresh = gifts.filter((g) => g.live && g.token && !g.account && isGiven(g));
+    if (!fresh.length) return;
+    claimGifts(fresh)
+      .then(() => setGifts((prev) => prev.map((g) => (fresh.some((f) => f.id === g.id) ? { ...g, account: true } : g))))
+      .catch(() => { /* retried on the next change */ });
+  }, [account, gifts]);
+
   const value = useMemo(
-    () => ({ gifts, recordGift, updateGift, creditBalance, addCredit, fundraisers, addFundraiser, joinedPrayer, togglePrayer }),
-    [gifts, recordGift, updateGift, creditBalance, addCredit, fundraisers, addFundraiser, joinedPrayer, togglePrayer],
+    () => ({ gifts, recordGift, updateGift, creditBalance, addCredit, fundraisers, addFundraiser, joinedPrayer, togglePrayer, account, signIn, signOut, closeOwnFundraiser }),
+    [gifts, recordGift, updateGift, creditBalance, addCredit, fundraisers, addFundraiser, joinedPrayer, togglePrayer, account, signIn, signOut, closeOwnFundraiser],
   );
   return <GiftsContext.Provider value={value}>{children}</GiftsContext.Provider>;
 }

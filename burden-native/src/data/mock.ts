@@ -70,6 +70,8 @@ export type Gift = {
   live: boolean;
   testMode?: boolean;
   token?: string;
+  // kept with the giver's account (synced to every device they sign in on)
+  account?: boolean;
   // paid from the donor's account credit (the BURDEN wallet) rather than a provider
   fromCredit?: boolean;
   // Words of support shown on the burden page (never with the amount), the
